@@ -1,0 +1,38 @@
+@import "tailwindcss";
+
+@theme {
+  --font-sans: "Inter", ui-sans-serif, system-ui, sans-serif;
+  --font-pixel: "Press Start 2P", ui-monospace, monospace;
+  --color-ink-950: #0d0c14;
+  --color-ink-900: #14121d;
+  --color-ink-850: #1a1826;
+  --color-ink-800: #211e30;
+  --color-ink-700: #2d2940;
+  --color-ink-600: #3b3654;
+}
+
+html,
+body,
+#root {
+  height: 100%;
+}
+body {
+  margin: 0;
+  font-family: var(--font-sans);
+  -webkit-font-smoothing: antialiased;
+}
+.scroll-thin {
+  scrollbar-width: thin;
+  scrollbar-color: #3b3654 transparent;
+}
+@keyframes blink {
+  50% {
+    opacity: 0;
+  }
+}
+.caret::after {
+  content: "▍";
+  margin-left: 1px;
+  animation: blink 1s step-end infinite;
+  color: #a78bfa;
+}

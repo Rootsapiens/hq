@@ -43,7 +43,8 @@ function lastUserText(messages: MessageParam[]): string {
   for (let i = messages.length - 1; i >= 0; i--) {
     const m = messages[i];
     if (m && m.role === "user") {
-      const t = blockText(m.content);
+      // history merges consecutive user turns with a blank line; the newest one is last
+      const t = blockText(m.content).split(/\n\n/).pop() ?? "";
       if (t.trim()) return t;
     }
   }
