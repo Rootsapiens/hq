@@ -47,7 +47,7 @@ System prompts are short summaries of the agent files; the agent files themselve
 - Tools: `assign_task` (Boss only), `report_result`, `update_status`. One queue per agent; model calls retry with
   exponential backoff (3 retries); a final failure turns the agent ERROR and never crashes the server.
 - Storage: SQLite (`better-sqlite3`) at `server/data/hq.sqlite` (git-ignored). Override with `HQ_DB`.
-- Env: `ANTHROPIC_API_KEY`, `MODEL` (default `claude-sonnet-5-5`), `MOCK`, `PORT` (8787), `MEETING_MS` (8000).
+- Env: `ANTHROPIC_API_KEY`, `MODEL` (default `claude-sonnet-5-5`), `MOCK`, `HQ_PORT` (8787), `MEETING_MS` (8000).
 
 MOCK triggers for demos: add `#fail` to a message to make that agent fail all retries (ERROR),
 `#flaky` to fail once and recover, `#ask` to finish with "needs input".

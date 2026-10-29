@@ -9,7 +9,8 @@ const here = dirname(fileURLToPath(import.meta.url));
 const apiKey = (process.env.ANTHROPIC_API_KEY ?? "").trim();
 const modelName = (process.env.MODEL ?? "").trim() || "claude-sonnet-5-5";
 const mockFlag = process.env.MOCK === "1" || process.env.MOCK === "true";
-const port = Number(process.env.PORT ?? 8787);
+// HQ_PORT, not PORT: launchers often set PORT to the web port, which would collide with Vite.
+const port = Number(process.env.HQ_PORT ?? 8787);
 
 let model: ModelClient;
 if (mockFlag || !apiKey) {
