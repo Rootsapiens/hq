@@ -42,6 +42,7 @@ System prompts are short summaries of the agent files; the agent files themselve
 ## Server
 
 - `POST /api/agents/:id/message` `{ "text": "..." }` queues a message (202). `GET /api/agents/:id/messages`, `GET /api/state`, `POST /api/pause` `{ "paused": true }`, `GET /api/health`.
+- Local only: binds 127.0.0.1 and refuses requests and WS connections from non-localhost Origins.
 - WebSocket `/ws`: a `snapshot` first, then events. The contract lives in `shared/events.ts` (zod schemas, no `any`).
 - Tools: `assign_task` (Boss only), `report_result`, `update_status`. One queue per agent; model calls retry with
   exponential backoff (3 retries); a final failure turns the agent ERROR and never crashes the server.

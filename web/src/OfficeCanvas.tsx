@@ -32,7 +32,9 @@ export function OfficeCanvas({ className = "" }: { className?: string }) {
     current = office;
     let last = store.get();
     let unsub = () => {};
+    let disposed = false;
     void office.init(el).then(() => {
+      if (disposed) return;
       const push = () => {
         const s = store.get();
         if (s.agents !== last.agents || !last.agents.length) office.setAgents(s.agents);
@@ -46,6 +48,7 @@ export function OfficeCanvas({ className = "" }: { className?: string }) {
     });
     window.__hq = { characters: () => office.debug(), focus: (id) => office.focus(id) };
     return () => {
+      disposed = true;
       unsub();
       if (current === office) current = null;
       office.destroy();

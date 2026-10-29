@@ -29,24 +29,47 @@ function send(res: ServerResponse, status: number, body: unknown): void {
   res.end(json);
 }
 
+class HttpError extends Error {
+  constructor(
+    readonly status: number,
+    message: string,
+  ) {
+    super(message);
+  }
+}
+
+/** Only pages served from this machine may talk to HQ (blocks drive-by requests from other sites). */
+export function isLocalOrigin(origin: string | undefined): boolean {
+  if (!origin) return true; // curl, server-to-server, same-origin GET
+  try {
+    const host = new URL(origin).hostname;
+    return host === "localhost" || host === "127.0.0.1" || host === "[::1]";
+  } catch {
+    return false;
+  }
+}
+
 function readJson(req: IncomingMessage): Promise<unknown> {
   return new Promise((resolve, reject) => {
+    if (!(req.headers["content-type"] ?? "").toLowerCase().startsWith("application/json")) {
+      req.resume();
+      reject(new HttpError(415, "content-type must be application/json"));
+      return;
+    }
     let size = 0;
+    let tooLarge = false;
     const chunks: Buffer[] = [];
     req.on("data", (c: Buffer) => {
       size += c.length;
-      if (size > MAX_BODY) {
-        reject(new Error("body too large"));
-        req.destroy();
-        return;
-      }
-      chunks.push(c);
+      if (size > MAX_BODY) tooLarge = true; // keep draining so we can answer 413
+      else chunks.push(c);
     });
     req.on("end", () => {
+      if (tooLarge) return reject(new HttpError(413, "body too large"));
       try {
         resolve(chunks.length ? (JSON.parse(Buffer.concat(chunks).toString("utf8")) as unknown) : {});
       } catch {
-        reject(new Error("invalid JSON"));
+        reject(new HttpError(400, "invalid JSON"));
       }
     });
     req.on("error", reject);
@@ -68,6 +91,7 @@ export async function startApp(opts: AppOptions): Promise<App> {
   async function handle(req: IncomingMessage, res: ServerResponse): Promise<void> {
     const url = new URL(req.url ?? "/", "http://localhost");
     const path = url.pathname;
+    if (!isLocalOrigin(req.headers.origin)) return send(res, 403, { ok: false, error: "origin not allowed" });
     if (req.method === "GET" && path === "/api/health") return send(res, 200, { ok: true, mode: opts.model.mode, clients: clients.size });
     if (req.method === "GET" && path === "/api/state") return send(res, 200, hq.snapshot());
     if (req.method === "GET" && path === "/api/agents") return send(res, 200, hq.agentViews());
@@ -82,7 +106,7 @@ export async function startApp(opts: AppOptions): Promise<App> {
         try {
           raw = await readJson(req);
         } catch (err) {
-          return send(res, 400, { ok: false, error: errorMessage(err) });
+          return send(res, err instanceof HttpError ? err.status : 400, { ok: false, error: errorMessage(err) });
         }
         const body = PostMessageBodySchema.safeParse(raw);
         if (!body.success) return send(res, 400, { ok: false, error: "body must be {\"text\": string}" });
@@ -95,7 +119,7 @@ export async function startApp(opts: AppOptions): Promise<App> {
       try {
         raw = await readJson(req);
       } catch (err) {
-        return send(res, 400, { ok: false, error: errorMessage(err) });
+        return send(res, err instanceof HttpError ? err.status : 400, { ok: false, error: errorMessage(err) });
       }
       const body = PauseBodySchema.safeParse(raw);
       if (!body.success) return send(res, 400, { ok: false, error: "body must be {\"paused\": boolean}" });
@@ -108,7 +132,7 @@ export async function startApp(opts: AppOptions): Promise<App> {
   const wss = new WebSocketServer({ noServer: true });
   server.on("upgrade", (req, socket, head) => {
     const url = new URL(req.url ?? "/", "http://localhost");
-    if (url.pathname !== "/ws") {
+    if (url.pathname !== "/ws" || !isLocalOrigin(req.headers.origin)) {
       socket.destroy();
       return;
     }
@@ -136,6 +160,9 @@ export async function startApp(opts: AppOptions): Promise<App> {
     server,
     port,
     async close() {
+      // stop new jobs and give running ones a moment to finish before the DB closes
+      hq.setPaused(true);
+      await hq.settle(3000);
       unsubscribe();
       for (const ws of clients) ws.terminate();
       wss.close();

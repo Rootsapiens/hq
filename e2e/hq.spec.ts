@@ -38,7 +38,15 @@ async function waitChar(page: Page, id: string, pred: (c: Ch) => boolean, timeou
   return last;
 }
 
+/** Uncaught page errors; every test asserts this stays empty. */
+const pageErrors: string[] = [];
+test.afterEach(() => {
+  expect(pageErrors).toEqual([]);
+  pageErrors.length = 0;
+});
+
 async function ready(page: Page) {
+  page.on("pageerror", (e) => pageErrors.push(e.message));
   await page.goto("/");
   await expect(page.getByTestId("mode-badge")).toHaveText("MOCK");
   await expect.poll(async () => (await chars(page)).length, { timeout: 20_000 }).toBe(6);

@@ -1,6 +1,5 @@
 // WS event contract + end-to-end server behaviour in MOCK mode (no network, no API key).
-import { mkdtempSync, rmSync } from "node:fs";
-import { tmpdir } from "node:os";
+import { mkdirSync, mkdtempSync, rmSync } from "node:fs";
 import { join } from "node:path";
 import { isDeepStrictEqual } from "node:util";
 import { afterAll, afterEach, beforeEach, describe, expect, it } from "vitest";
@@ -10,7 +9,10 @@ import { startApp, type App } from "../src/app";
 import { MockModel } from "../src/mock";
 import type { ModelClient, TurnInput, TurnResult } from "../src/model";
 
-const dir = mkdtempSync(join(tmpdir(), "hq-test-"));
+// test databases stay inside the repo (server/data is git-ignored)
+const dataDir = join(import.meta.dirname, "..", "data");
+mkdirSync(dataDir, { recursive: true });
+const dir = mkdtempSync(join(dataDir, "test-"));
 afterAll(() => rmSync(dir, { recursive: true, force: true }));
 let n = 0;
 
@@ -158,6 +160,29 @@ describe("WS contract", () => {
     expect(statuses(h.events, "aktham")).not.toContain("ERROR");
   });
 
+  it("messages queued while busy each get their own job (no mixing, request ends on the user turn)", async () => {
+    await post(h.base, "/api/pause", { paused: true });
+    await post(h.base, "/api/agents/aktham/message", { text: "draw the logo" });
+    await post(h.base, "/api/agents/aktham/message", { text: "write the jingle" });
+    await post(h.base, "/api/pause", { paused: false });
+    await waitFor(() => h.events.filter((e) => e.type === "counters").length >= 2);
+    await h.app.hq.idle();
+    const thread = (await (await fetch(`${h.base}/api/agents/aktham/messages`)).json()) as ChatMessage[];
+    const replies = thread.filter((m) => m.author === "aktham" && m.content.includes("Picking up")).map((m) => m.content);
+    expect(replies.length).toBe(2);
+    expect(replies.some((r) => r.includes("draw the logo"))).toBe(true);
+    expect(replies.some((r) => r.includes("write the jingle"))).toBe(true);
+  });
+
+  it("a failed delegated task is reported to the Boss in a way his history keeps", async () => {
+    await post(h.base, "/api/agents/cyrex/message", { text: "@nedal animate the intro #fail" });
+    await waitFor(() => statuses(h.events, "nedal").includes("ERROR"));
+    await h.app.hq.idle();
+    const thread = (await (await fetch(`${h.base}/api/agents/cyrex/messages`)).json()) as ChatMessage[];
+    const failed = thread.find((m) => m.author === "nedal" && m.content.startsWith("Report: FAILED"));
+    expect(failed?.state).toBe("done");
+  });
+
   it("global pause queues work; resume runs it", async () => {
     expect((await post(h.base, "/api/pause", { paused: true })).status).toBe(200);
     const r = (await (await post(h.base, "/api/agents/nedal/message", { text: "walk cycle" })).json()) as { queued: number };
@@ -173,8 +198,27 @@ describe("WS contract", () => {
     expect((await post(h.base, "/api/agents/cyrex/message", { text: "" })).status).toBe(400);
     expect((await post(h.base, "/api/agents/nobody/message", { text: "hi" })).status).toBe(404);
     expect((await post(h.base, "/api/pause", { paused: "yes" })).status).toBe(400);
-    const bad = await fetch(`${h.base}/api/agents/cyrex/message`, { method: "POST", body: "{not json" });
+    const bad = await fetch(`${h.base}/api/agents/cyrex/message`, { method: "POST", headers: { "content-type": "application/json" }, body: "{not json" });
     expect(bad.status).toBe(400);
+    const plain = await fetch(`${h.base}/api/agents/cyrex/message`, { method: "POST", body: JSON.stringify({ text: "hi" }) });
+    expect(plain.status).toBe(415);
+    const big = await post(h.base, "/api/agents/cyrex/message", { text: "x".repeat(70 * 1024) });
+    expect(big.status).toBe(413);
+    const foreign = await fetch(`${h.base}/api/agents/cyrex/message`, {
+      method: "POST",
+      headers: { "content-type": "application/json", origin: "https://evil.example" },
+      body: JSON.stringify({ text: "spend tokens" }),
+    });
+    expect(foreign.status).toBe(403);
+    const local = await fetch(`${h.base}/api/health`, { headers: { origin: "http://localhost:5173" } });
+    expect(local.status).toBe(200);
+    // a foreign page cannot open the event stream either
+    const wsForeign = new WebSocket(`ws://127.0.0.1:${h.app.port}/ws`, { origin: "https://evil.example" });
+    const outcome = await new Promise<string>((r) => {
+      wsForeign.once("open", () => r("open"));
+      wsForeign.once("error", () => r("refused"));
+    });
+    expect(outcome).toBe("refused");
   });
 });
 

@@ -20,6 +20,7 @@ export interface HqOptions {
 }
 
 interface Job {
+  /** Id of the stored chat message that carries this job. */
   id: string;
   kind: "owner" | "task";
   from: string; // "owner" or the delegating agent id
@@ -143,6 +144,12 @@ export class Hq {
     }
   }
 
+  /** Resolves when no job is running (queued jobs may remain). Used on shutdown. */
+  async settle(timeoutMs = 3000): Promise<void> {
+    const start = Date.now();
+    while ([...this.rts.values()].some((rt) => rt.busy) && Date.now() - start < timeoutMs) await sleep(20);
+  }
+
   dispose(): void {
     for (const rt of this.rts.values()) rt.sm.dispose();
     this.listeners.clear();
@@ -217,9 +224,18 @@ export class Hq {
       });
   }
 
-  private history(rt: Runtime): MessageParam[] {
+  /**
+   * Conversation for one job: earlier finished turns, without messages that belong to jobs
+   * still waiting in the queue, and with this job's own message last (so the request
+   * always ends on a user turn, even when the message arrived while an older job was streaming).
+   */
+  private history(rt: Runtime, job: Job): MessageParam[] {
     const out: MessageParam[] = [];
-    for (const m of this.db.messages(rt.config.id, this.historyLimit)) {
+    const pending = new Set(rt.queue.map((j) => j.id));
+    const all = this.db.messages(rt.config.id, this.historyLimit);
+    const own = all.find((m) => m.id === job.id);
+    const ordered = [...all.filter((m) => m.id !== job.id && !pending.has(m.id)), ...(own ? [own] : [])];
+    for (const m of ordered) {
       if (m.state === "error" || !m.content.trim() || m.author === "system") continue;
       const role = m.author === rt.config.id ? "assistant" : "user";
       let text = m.content;
@@ -232,6 +248,7 @@ export class Hq {
       else out.push({ role, content: text });
     }
     while (out.length && out[0]?.role !== "user") out.shift();
+    if (!own) out.push({ role: "user", content: job.text });
     return out;
   }
 
@@ -290,8 +307,7 @@ export class Hq {
     let lastText = "";
     try {
       this.setStatus(rt, "THINKING", clip(job.text.replace(/^\[from [^\]]+\]\s*/i, ""), 60));
-      const messages = this.history(rt);
-      if (messages.length === 0) messages.push({ role: "user", content: job.text });
+      const messages = this.history(rt, job);
       for (let round = 0; round < this.maxToolRounds; round++) {
         this.setStatus(rt, "THINKING");
         const { result } = await this.callModel(rt, messages);
@@ -336,7 +352,7 @@ export class Hq {
       this.setStatus(rt, "ERROR", undefined, msg);
       this.saveMessage({ thread: rt.config.id, author: "system", content: `Error: ${msg}`, state: "error" });
       if (job.kind === "task" && this.rts.has(job.from)) {
-        this.saveMessage({ thread: job.from, author: rt.config.id, content: `Report: FAILED (${msg})`, state: "error" });
+        this.saveMessage({ thread: job.from, author: rt.config.id, content: `Report: FAILED (${msg})`, state: "done" }); // "done" so the Boss sees it in his history
       }
     }
   }
@@ -378,9 +394,9 @@ export class Hq {
     const joins = !target.busy && target.queue.length === 0;
     if (joins) this.setStatus(target, "MEETING", short);
     if (this.meetingMs > 0) await sleep(this.meetingMs);
-    this.saveMessage({ thread: target.config.id, author: boss.config.id, content: task, state: "done" });
+    const brief = this.saveMessage({ thread: target.config.id, author: boss.config.id, content: task, state: "done" });
     // The target stays in MEETING until its job starts (immediately unless paused).
-    this.enqueue(target, { id: randomUUID(), kind: "task", from: boss.config.id, text: `[from ${boss.config.name}] ${task}` });
+    this.enqueue(target, { id: brief.id, kind: "task", from: boss.config.id, text: `[from ${boss.config.name}] ${task}` });
     if (joins && this.paused) this.setStatus(target, "IDLE");
   }
 }

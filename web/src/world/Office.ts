@@ -165,24 +165,26 @@ class Character {
     }
 
     // move along the path
+    // the whole step budget is spent, across tile corners, so slow frames do not slow walking
     let moving = false;
-    if (this.path.length > 0) {
+    let budget = (WALK_SPEED * dtMs) / 1000;
+    while (this.path.length > 0 && budget > 0) {
       const next = this.path[0];
-      if (next) {
-        const target = tileCenter(next);
-        const dx = target.x - this.pos.x;
-        const dy = target.y - this.pos.y;
-        const dist = Math.hypot(dx, dy);
-        const stepLen = (WALK_SPEED * dtMs) / 1000;
-        if (dist <= stepLen) {
-          this.pos = target;
-          this.path.shift();
-          if (this.path.length === 0 && act === "wander") this.waitUntil = now + 1800 + Math.random() * 3500;
-        } else {
-          this.pos = { x: this.pos.x + (dx / dist) * stepLen, y: this.pos.y + (dy / dist) * stepLen };
-          this.dir = dirFromStep(dx, dy, this.dir);
-        }
-        moving = dist > 0.001;
+      if (!next) break;
+      const target = tileCenter(next);
+      const dx = target.x - this.pos.x;
+      const dy = target.y - this.pos.y;
+      const dist = Math.hypot(dx, dy);
+      if (dist > 0.001) moving = true;
+      if (dist <= budget) {
+        this.pos = target;
+        this.path.shift();
+        budget -= dist;
+        if (this.path.length === 0 && act === "wander") this.waitUntil = now + 1800 + Math.random() * 3500;
+      } else {
+        this.pos = { x: this.pos.x + (dx / dist) * budget, y: this.pos.y + (dy / dist) * budget };
+        this.dir = dirFromStep(dx, dy, this.dir);
+        budget = 0;
       }
     }
 
@@ -306,6 +308,10 @@ export class Office {
       await document.fonts.load(`8px ${PIXEL_FONT}`);
     } catch {
       /* fall back to monospace */
+    }
+    if (this.destroyed) {
+      this.app.destroy(true);
+      return;
     }
     host.appendChild(this.app.canvas);
     this.app.canvas.style.imageRendering = "pixelated";
@@ -640,7 +646,7 @@ export class Office {
 
   private tick(dtMs: number): void {
     const now = performance.now();
-    const dt = Math.min(dtMs, 100);
+    const dt = Math.min(dtMs, 1000); // cap only huge gaps (background tab)
     const occ = this.occupied();
     for (const c of this.chars.values()) c.update(dt, now, occ);
     this.drawBrain(now);
