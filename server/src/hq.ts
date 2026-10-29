@@ -35,6 +35,11 @@ interface Runtime {
 }
 
 type Listener = (e: ServerEvent) => void;
+interface ToolOutcome {
+  content: string;
+  isError: boolean;
+  reported?: string;
+}
 const sleep = (ms: number) => new Promise<void>((r) => setTimeout(r, ms));
 const clip = (s: string, n = 80) => (s.length > n ? `${s.slice(0, n - 3)}...` : s);
 
@@ -54,7 +59,7 @@ export class Hq {
   constructor(opts: HqOptions) {
     this.db = opts.db;
     this.model = opts.model;
-    this.meetingMs = opts.meetingMs ?? 3000;
+    this.meetingMs = opts.meetingMs ?? 8000;
     this.retries = opts.retries ?? 3;
     this.retryBaseMs = opts.retryBaseMs ?? 800;
     this.maxToolRounds = opts.maxToolRounds ?? 6;
@@ -294,11 +299,25 @@ export class Hq {
         if (result.toolCalls.length === 0) break;
         messages.push({ role: "assistant", content: result.assistantContent });
         const toolResults: MessageParam = { role: "user", content: [] };
+        // all delegations of one turn share a single meeting; other tools run in order after it
+        const assigns = result.toolCalls.filter((c) => c.name === "assign_task");
+        const others = result.toolCalls.filter((c) => c.name !== "assign_task");
+        const outcomes = new Map<string, ToolOutcome>();
+        if (assigns.length) {
+          const done = await Promise.all(assigns.map((c) => this.runTool(rt, c)));
+          assigns.forEach((c, i) => {
+            const o = done[i];
+            if (o) outcomes.set(c.id, o);
+          });
+          if (rt.config.isBoss) this.setStatus(rt, "WORKING");
+        }
+        for (const c of others) outcomes.set(c.id, await this.runTool(rt, c));
         for (const call of result.toolCalls) {
-          const { content, isError, reported } = await this.runTool(rt, call);
-          if (reported !== undefined) report = reported;
+          const o = outcomes.get(call.id);
+          if (!o) continue;
+          if (o.reported !== undefined) report = o.reported;
           if (Array.isArray(toolResults.content)) {
-            toolResults.content.push({ type: "tool_result", tool_use_id: call.id, content, is_error: isError });
+            toolResults.content.push({ type: "tool_result", tool_use_id: call.id, content: o.content, is_error: o.isError });
           }
         }
         messages.push(toolResults);
@@ -322,7 +341,7 @@ export class Hq {
     }
   }
 
-  private async runTool(rt: Runtime, call: ToolCall): Promise<{ content: string; isError: boolean; reported?: string }> {
+  private async runTool(rt: Runtime, call: ToolCall): Promise<ToolOutcome> {
     try {
       switch (call.name) {
         case "assign_task": {
@@ -363,7 +382,6 @@ export class Hq {
     // The target stays in MEETING until its job starts (immediately unless paused).
     this.enqueue(target, { id: randomUUID(), kind: "task", from: boss.config.id, text: `[from ${boss.config.name}] ${task}` });
     if (joins && this.paused) this.setStatus(target, "IDLE");
-    this.setStatus(boss, "WORKING");
   }
 }
 

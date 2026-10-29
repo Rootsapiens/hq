@@ -51,6 +51,18 @@ function lastUserText(messages: MessageParam[]): string {
   return "";
 }
 
+/** "@a do x and @b do y" -> { a: "do x and", b: "do y" } (the caller trims joiners). */
+function splitByMention(text: string): Map<string, string> {
+  const out = new Map<string, string>();
+  const hits = [...text.matchAll(/@([a-zA-Z][\w-]*)/g)];
+  hits.forEach((m, i) => {
+    const start = (m.index ?? 0) + m[0].length;
+    const end = hits[i + 1]?.index ?? text.length;
+    out.set((m[1] ?? "").toLowerCase(), text.slice(start, end).trim());
+  });
+  return out;
+}
+
 const sleep = (ms: number) => new Promise<void>((r) => setTimeout(r, ms));
 
 export class MockModel implements ModelClient {
@@ -59,7 +71,7 @@ export class MockModel implements ModelClient {
   private flakySeen = new Set<string>();
   private seq = 0;
 
-  constructor(private readonly opts: MockOptions = { chunkMs: 45, workMs: 2500 }) {}
+  constructor(private readonly opts: MockOptions = { chunkMs: 45, workMs: 6000 }) {}
 
   async turn(input: TurnInput, onDelta: (delta: string) => void): Promise<TurnResult> {
     const lastMsg = input.messages[input.messages.length - 1];
@@ -93,8 +105,14 @@ export class MockModel implements ModelClient {
         }
         const names = targets.map((t) => AGENTS.find((a) => a.id === t)?.name ?? t);
         text = `[MOCK] On it. Routing this to ${names.join(" and ")}. I'll meet them in the Meeting Room and approve only from proof.`;
+        const parts = splitByMention(task);
         for (const agent of targets) {
-          const clean = task.replace(/@[\w-]+/g, "").replace(/\s+/g, " ").trim() || "the owner's request";
+          const own = parts.get(agent) ?? task.replace(/@[\w-]+/g, "");
+          const clean =
+            own
+              .replace(/\s+/g, " ")
+              .replace(/^(and|then)\s+|[\s,]+(and|then)?$/gi, "")
+              .trim() || "the owner's request";
           calls.push({ id: id(), name: "assign_task", input: { agent, task: clean } });
         }
       } else {

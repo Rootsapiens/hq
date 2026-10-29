@@ -27,6 +27,7 @@ const app = await startApp({
   model,
   dbPath: process.env.HQ_DB ?? join(here, "..", "data", "hq.sqlite"),
   port,
+  meetingMs: process.env.MEETING_MS ? Number(process.env.MEETING_MS) : undefined,
 });
 console.log(`[hq] server on http://127.0.0.1:${app.port} (ws /ws)`);
 

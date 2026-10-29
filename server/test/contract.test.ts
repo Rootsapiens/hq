@@ -126,6 +126,17 @@ describe("WS contract", () => {
     expect(h.rawProblems).toEqual([]);
   });
 
+  it("two @mentions: one shared meeting, each agent gets only its own part", async () => {
+    await post(h.base, "/api/agents/cyrex/message", { text: "@rajaie fix the login build and @aktham draw the new logo" });
+    await waitFor(() => statuses(h.events, "rajaie").includes("DONE") && statuses(h.events, "aktham").includes("DONE"));
+    const first = async (id: string) => ((await (await fetch(`${h.base}/api/agents/${id}/messages`)).json()) as ChatMessage[])[0];
+    expect(await first("rajaie")).toMatchObject({ author: "cyrex", content: "fix the login build" });
+    expect(await first("aktham")).toMatchObject({ author: "cyrex", content: "draw the new logo" });
+    // one meeting for both: the Boss enters MEETING once
+    expect(statuses(h.events, "cyrex").filter((s) => s === "MEETING").length).toBe(1);
+    expect(h.rawProblems).toEqual([]);
+  });
+
   it("failures retry with backoff, end in ERROR, and never crash the server", async () => {
     await post(h.base, "/api/agents/zurub/message", { text: "write the pitch #fail" });
     await waitFor(() => statuses(h.events, "zurub").includes("ERROR"));

@@ -49,8 +49,14 @@ export const store = {
   setTab: (tab: Tab) => set({ tab }),
   setThread(thread: string, messages: ChatMessage[]): void {
     // merge: keep any live messages newer than the fetched page
-    const live = (state.threads[thread] ?? []).filter((m) => !messages.some((x) => x.id === m.id));
-    const all = [...messages, ...live].sort((a, b) => a.ts - b.ts);
+    const live = state.threads[thread] ?? [];
+    // a message still streaming live has more text than its stored row: keep the live copy
+    const fetched = messages.map((m) => {
+      const l = live.find((x) => x.id === m.id);
+      return l && l.state === "streaming" && m.state === "streaming" && l.content.length > m.content.length ? l : m;
+    });
+    const extra = live.filter((m) => !messages.some((x) => x.id === m.id));
+    const all = [...fetched, ...extra].sort((a, b) => a.ts - b.ts);
     set({ threads: { ...state.threads, [thread]: all } });
   },
   apply(e: ServerEvent): void {

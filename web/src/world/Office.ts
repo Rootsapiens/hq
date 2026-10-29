@@ -11,7 +11,7 @@ import { SPRITE_H, SPRITE_W, loadOverride, paletteFor, sheetCanvas } from "./spr
 TextureStyle.defaultOptions.scaleMode = "nearest";
 
 const PIXEL_FONT = '"Press Start 2P", monospace';
-const WALK_SPEED = 3.4; // tiles per second
+const WALK_SPEED = 4; // tiles per second
 const DONE_SHOW_MS = 5000;
 
 export interface CharacterDebug {
@@ -218,34 +218,33 @@ class Character {
   moving = false;
   badgeKind: string | null = null;
 
+  private badgeKey = "";
+
   private drawBadge(kind: "dots" | "check" | "alert" | null, now: number): void {
     this.badge.visible = kind !== null;
+    this.badgeKind = kind;
     if (kind === null) {
-      this.badgeKind = null;
+      this.badgeKey = "";
       return;
     }
-    if (kind === "dots") {
-      const n = Math.floor(now / 350) % 3;
-      this.badgeText.text = ".".repeat(n + 1).padEnd(3, " ");
-    }
-    if (kind === this.badgeKind) return;
-    this.badgeKind = kind;
+    const lit = kind === "dots" ? Math.floor(now / 300) % 4 : 0; // 0..3 dots lit, cycling
+    const key = `${kind}:${lit}`;
+    if (key === this.badgeKey) return;
+    this.badgeKey = key;
     const g = this.badgeG;
     g.clear();
+    this.badgeText.text = "";
     if (kind === "dots") {
-      g.roundRect(-11, -7, 22, 12, 4).fill(0xf5f3ff).stroke({ width: 1, color: 0x15121d });
-      g.poly([-3, 5, 2, 5, -4, 9]).fill(0xf5f3ff);
-      this.badgeText.style.fill = 0x15121d;
-      this.badgeText.position.set(0, -2);
+      g.roundRect(-12, -7, 24, 13, 4).fill(0xf5f3ff).stroke({ width: 1, color: 0x15121d });
+      g.poly([-4, 6, 2, 6, -5, 10]).fill(0xf5f3ff);
+      for (let i = 0; i < 3; i++) g.rect(-7 + i * 5, -2, 3, 3).fill(i < lit || lit === 0 ? 0x15121d : 0xb8b2cc);
     } else if (kind === "check") {
       g.circle(0, 0, 7).fill(0x22c55e).stroke({ width: 1, color: 0x0b3d1f });
       g.moveTo(-3.5, 0).lineTo(-1, 2.8).lineTo(3.8, -2.6).stroke({ width: 2, color: 0xffffff });
-      this.badgeText.text = "";
     } else {
       g.circle(0, 0, 7).fill(0xef4444).stroke({ width: 1, color: 0x450a0a });
-      this.badgeText.text = "!";
-      this.badgeText.style.fill = 0xffffff;
-      this.badgeText.position.set(0.5, 0.5);
+      g.rect(-1, -4.5, 2.4, 5.5).fill(0xffffff);
+      g.rect(-1, 2.2, 2.4, 2.2).fill(0xffffff);
     }
   }
 
@@ -564,7 +563,8 @@ export class Office {
   }
 
   /** Fit the whole office into the canvas. */
-  fit(): void {
+  /** Fit the office into the canvas. On narrow screens (unless `whole`) zoom in on the Commons instead. */
+  fit(whole = false): void {
     const w = this.app.screen.width;
     const h = this.app.screen.height;
     const left = toScreen(0, GRID_H).x;
@@ -577,6 +577,13 @@ export class Office {
     this.world.scale.set(this.zoom);
     this.world.x = w / 2 - ((left + right) / 2) * this.zoom;
     this.world.y = h / 2 - ((top + bottom) / 2) * this.zoom;
+    if (!whole && w < 640 && this.zoom < 0.9) {
+      this.zoom = 0.9;
+      this.world.scale.set(this.zoom);
+      const c = toScreen(BRAIN_CENTER.x, BRAIN_CENTER.y);
+      this.world.x = w / 2 - c.x * this.zoom;
+      this.world.y = h / 2 - (c.y - 10) * this.zoom;
+    }
     this.userMovedCamera = false;
   }
 
@@ -661,6 +668,6 @@ export class Office {
   resetView(): void {
     this.follow = null;
     this.camTarget = null;
-    this.fit();
+    this.fit(true);
   }
 }

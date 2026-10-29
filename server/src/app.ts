@@ -57,6 +57,7 @@ export async function startApp(opts: AppOptions): Promise<App> {
   const db = new HqDb(opts.dbPath);
   const hq = new Hq({ ...opts, db, model: opts.model });
 
+  const clients = new Set<WebSocket>();
   const server = createServer((req, res) => {
     handle(req, res).catch((err) => {
       console.error("[http] handler error:", errorMessage(err));
@@ -67,7 +68,7 @@ export async function startApp(opts: AppOptions): Promise<App> {
   async function handle(req: IncomingMessage, res: ServerResponse): Promise<void> {
     const url = new URL(req.url ?? "/", "http://localhost");
     const path = url.pathname;
-    if (req.method === "GET" && path === "/api/health") return send(res, 200, { ok: true, mode: opts.model.mode });
+    if (req.method === "GET" && path === "/api/health") return send(res, 200, { ok: true, mode: opts.model.mode, clients: clients.size });
     if (req.method === "GET" && path === "/api/state") return send(res, 200, hq.snapshot());
     if (req.method === "GET" && path === "/api/agents") return send(res, 200, hq.agentViews());
 
@@ -105,7 +106,6 @@ export async function startApp(opts: AppOptions): Promise<App> {
   }
 
   const wss = new WebSocketServer({ noServer: true });
-  const clients = new Set<WebSocket>();
   server.on("upgrade", (req, socket, head) => {
     const url = new URL(req.url ?? "/", "http://localhost");
     if (url.pathname !== "/ws") {

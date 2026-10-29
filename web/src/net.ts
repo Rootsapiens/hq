@@ -2,38 +2,47 @@
 import { parseServerEvent, type ChatMessage, type PostMessageResponse } from "../../shared/events";
 import { store } from "./store";
 
-let socket: WebSocket | null = null;
-let retry = 0;
-let stopped = false;
-
+/**
+ * Opens the event stream and keeps it open. Returns a stop function.
+ * Each call owns its own socket and timer, so a stopped connection can never
+ * reconnect behind a newer one (React StrictMode mounts effects twice).
+ */
 export function connect(): () => void {
-  stopped = false;
+  let stopped = false;
+  let retry = 0;
+  let socket: WebSocket | null = null;
+  let timer: ReturnType<typeof setTimeout> | null = null;
+
+  const open = () => {
+    if (stopped) return;
+    const proto = location.protocol === "https:" ? "wss" : "ws";
+    const ws = new WebSocket(`${proto}://${location.host}/ws`);
+    socket = ws;
+    ws.onopen = () => {
+      if (stopped) return ws.close();
+      retry = 0;
+      store.setConnected(true);
+      void loadThread(store.get().selected);
+    };
+    ws.onmessage = (ev) => {
+      if (stopped || socket !== ws) return;
+      const e = parseServerEvent(typeof ev.data === "string" ? ev.data : "");
+      if (e) store.apply(e);
+      else console.warn("[hq] dropped malformed event");
+    };
+    ws.onclose = () => {
+      if (stopped || socket !== ws) return;
+      store.setConnected(false);
+      timer = setTimeout(open, Math.min(8000, 400 * 2 ** retry++));
+    };
+  };
   open();
+
   return () => {
     stopped = true;
+    if (timer) clearTimeout(timer);
     socket?.close();
-  };
-}
-
-function open(): void {
-  const proto = location.protocol === "https:" ? "wss" : "ws";
-  const ws = new WebSocket(`${proto}://${location.host}/ws`);
-  socket = ws;
-  ws.onopen = () => {
-    retry = 0;
-    store.setConnected(true);
-    void loadThread(store.get().selected);
-  };
-  ws.onmessage = (ev) => {
-    const e = parseServerEvent(typeof ev.data === "string" ? ev.data : "");
-    if (e) store.apply(e);
-    else console.warn("[hq] dropped malformed event");
-  };
-  ws.onclose = () => {
-    store.setConnected(false);
-    if (stopped) return;
-    const wait = Math.min(8000, 400 * 2 ** retry++);
-    setTimeout(open, wait);
+    socket = null;
   };
 }
 
