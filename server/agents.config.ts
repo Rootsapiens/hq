@@ -1,5 +1,5 @@
 // Single source of truth for the HQ roster.
-// System prompts are short summaries of the real agent files in C:\Users\nadee\.claude\agents\
+// System prompts are short summaries of the real agent files in ~/.claude/agents/
 // (written for HQ chat; the agent files themselves are not copied or changed).
 import type { RoomId } from "../shared/events";
 
