@@ -29,12 +29,12 @@ const SHOES = 0x17151f;
 const EYES = 0x1b1724;
 
 const LOOKS: Record<string, { skin: number; hair: number }> = {
-  kahn: { skin: 0xc68c5d, hair: 0x2a1d17 },
-  sektor: { skin: 0xe0ac7e, hair: 0x111014 },
-  sindel: { skin: 0xb07446, hair: 0x6b3b1f },
-  nightwolf: { skin: 0xd99f74, hair: 0x3b2a20 },
-  sonya: { skin: 0xf0c49a, hair: 0x8a3b2b },
-  liukang: { skin: 0x9a6440, hair: 0x23201d },
+  cyrex: { skin: 0xc68c5d, hair: 0x2a1d17 },
+  rajaie: { skin: 0xe0ac7e, hair: 0x111014 },
+  aktham: { skin: 0xb07446, hair: 0x6b3b1f },
+  zurub: { skin: 0xd99f74, hair: 0x3b2a20 },
+  razan: { skin: 0xf0c49a, hair: 0x8a3b2b },
+  nedal: { skin: 0x9a6440, hair: 0x23201d },
 };
 
 export function paletteFor(agentId: string, colorHex: string): Palette {

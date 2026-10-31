@@ -91,121 +91,121 @@ describe("WS contract", () => {
     expect(snap?.type).toBe("snapshot");
     if (snap?.type !== "snapshot") return;
     expect(snap.mode).toBe("mock");
-    expect(snap.agents.map((a) => a.id)).toEqual(["kahn", "nightwolf", "liukang", "sindel", "sektor", "sonya"]);
-    expect(snap.agents.filter((a) => a.isBoss).map((a) => a.id)).toEqual(["kahn"]);
+    expect(snap.agents.map((a) => a.id)).toEqual(["cyrex", "zurub", "nedal", "aktham", "rajaie", "razan"]);
+    expect(snap.agents.filter((a) => a.isBoss).map((a) => a.id)).toEqual(["cyrex"]);
     expect(new Set(snap.agents.map((a) => a.color)).size).toBe(6);
     expect(snap.agents.every((a) => a.status === "IDLE")).toBe(true);
   });
 
   it("Boss delegation via @name: meeting, work, done, report back; every frame matches the schema", async () => {
-    const res = await post(h.base, "/api/agents/kahn/message", { text: "@sektor fix the build" });
+    const res = await post(h.base, "/api/agents/cyrex/message", { text: "@rajaie fix the build" });
     expect(res.status).toBe(202);
-    await waitFor(() => statuses(h.events, "sektor").includes("DONE"));
-    await waitFor(() => statuses(h.events, "sektor").at(-1) === "IDLE");
+    await waitFor(() => statuses(h.events, "rajaie").includes("DONE"));
+    await waitFor(() => statuses(h.events, "rajaie").at(-1) === "IDLE");
     await h.app.hq.idle();
 
-    expect(statuses(h.events, "kahn").slice(0, 2)).toEqual(["THINKING", "MEETING"]);
-    expect(statuses(h.events, "kahn")).toContain("DONE");
-    expect(statuses(h.events, "sektor")).toEqual(["MEETING", "THINKING", "WORKING", "THINKING", "DONE", "IDLE"]);
+    expect(statuses(h.events, "cyrex").slice(0, 2)).toEqual(["THINKING", "MEETING"]);
+    expect(statuses(h.events, "cyrex")).toContain("DONE");
+    expect(statuses(h.events, "rajaie")).toEqual(["MEETING", "THINKING", "WORKING", "THINKING", "DONE", "IDLE"]);
     // nobody else moved
-    expect(statuses(h.events, "sindel")).toEqual([]);
+    expect(statuses(h.events, "aktham")).toEqual([]);
 
     const types = new Set(h.events.map((e) => e.type));
     for (const t of ["agent", "chat.message", "chat.delta", "chat.done", "activity", "brain", "counters"]) expect(types.has(t as ServerEvent["type"])).toBe(true);
     const brain = h.events.filter((e) => e.type === "brain").map((e) => (e.type === "brain" ? e.calls : -1));
     expect(Math.max(...brain)).toBeGreaterThan(0);
     expect(brain.at(-1)).toBe(0);
-    expect(h.events.some((e) => e.type === "activity" && e.entry.kind === "delegation" && e.entry.text.includes("Sektor"))).toBe(true);
+    expect(h.events.some((e) => e.type === "activity" && e.entry.kind === "delegation" && e.entry.text.includes("Rajaie"))).toBe(true);
 
     // streamed text == persisted text
-    const deltas = h.events.filter((e) => e.type === "chat.delta" && e.thread === "kahn").map((e) => (e.type === "chat.delta" ? e.delta : ""));
-    const cyrexThread = (await (await fetch(`${h.base}/api/agents/kahn/messages`)).json()) as ChatMessage[];
-    const bossReplies = cyrexThread.filter((m) => m.author === "kahn").map((m) => m.content).join("");
+    const deltas = h.events.filter((e) => e.type === "chat.delta" && e.thread === "cyrex").map((e) => (e.type === "chat.delta" ? e.delta : ""));
+    const cyrexThread = (await (await fetch(`${h.base}/api/agents/cyrex/messages`)).json()) as ChatMessage[];
+    const bossReplies = cyrexThread.filter((m) => m.author === "cyrex").map((m) => m.content).join("");
     expect(deltas.join("")).toBe(bossReplies);
-    expect(cyrexThread.some((m) => m.author === "sektor" && m.content.startsWith("Report:"))).toBe(true);
-    const rajaieThread = (await (await fetch(`${h.base}/api/agents/sektor/messages`)).json()) as ChatMessage[];
-    expect(rajaieThread[0]).toMatchObject({ author: "kahn", content: "fix the build" });
+    expect(cyrexThread.some((m) => m.author === "rajaie" && m.content.startsWith("Report:"))).toBe(true);
+    const rajaieThread = (await (await fetch(`${h.base}/api/agents/rajaie/messages`)).json()) as ChatMessage[];
+    expect(rajaieThread[0]).toMatchObject({ author: "cyrex", content: "fix the build" });
 
     expect(h.rawProblems).toEqual([]);
   });
 
   it("two @mentions: one shared meeting, each agent gets only its own part", async () => {
-    await post(h.base, "/api/agents/kahn/message", { text: "@sektor fix the login build and @sindel draw the new logo" });
-    await waitFor(() => statuses(h.events, "sektor").includes("DONE") && statuses(h.events, "sindel").includes("DONE"));
+    await post(h.base, "/api/agents/cyrex/message", { text: "@rajaie fix the login build and @aktham draw the new logo" });
+    await waitFor(() => statuses(h.events, "rajaie").includes("DONE") && statuses(h.events, "aktham").includes("DONE"));
     const first = async (id: string) => ((await (await fetch(`${h.base}/api/agents/${id}/messages`)).json()) as ChatMessage[])[0];
-    expect(await first("sektor")).toMatchObject({ author: "kahn", content: "fix the login build" });
-    expect(await first("sindel")).toMatchObject({ author: "kahn", content: "draw the new logo" });
+    expect(await first("rajaie")).toMatchObject({ author: "cyrex", content: "fix the login build" });
+    expect(await first("aktham")).toMatchObject({ author: "cyrex", content: "draw the new logo" });
     // one meeting for both: the Boss enters MEETING once
-    expect(statuses(h.events, "kahn").filter((s) => s === "MEETING").length).toBe(1);
+    expect(statuses(h.events, "cyrex").filter((s) => s === "MEETING").length).toBe(1);
     expect(h.rawProblems).toEqual([]);
   });
 
   it("failures retry with backoff, end in ERROR, and never crash the server", async () => {
-    await post(h.base, "/api/agents/nightwolf/message", { text: "write the pitch #fail" });
-    await waitFor(() => statuses(h.events, "nightwolf").includes("ERROR"));
+    await post(h.base, "/api/agents/zurub/message", { text: "write the pitch #fail" });
+    await waitFor(() => statuses(h.events, "zurub").includes("ERROR"));
     const retries = h.events.filter((e) => e.type === "activity" && e.entry.text.includes("retry"));
     expect(retries.length).toBe(2);
-    const last = h.events.filter((e) => e.type === "agent" && e.agent.id === "nightwolf").at(-1);
+    const last = h.events.filter((e) => e.type === "agent" && e.agent.id === "zurub").at(-1);
     expect(last?.type === "agent" && last.agent.error).toContain("#fail");
     expect((await fetch(`${h.base}/api/health`)).status).toBe(200);
     // the agent recovers on the next message
-    await post(h.base, "/api/agents/nightwolf/message", { text: "try again" });
-    await waitFor(() => statuses(h.events, "nightwolf").at(-1) === "DONE");
+    await post(h.base, "/api/agents/zurub/message", { text: "try again" });
+    await waitFor(() => statuses(h.events, "zurub").at(-1) === "DONE");
     expect(h.rawProblems).toEqual([]);
   });
 
   it("a flaky first attempt resets the streamed message and succeeds", async () => {
-    await post(h.base, "/api/agents/sindel/message", { text: "draw a logo #flaky" });
-    await waitFor(() => statuses(h.events, "sindel").includes("DONE"));
-    expect(h.events.some((e) => e.type === "chat.reset" && e.thread === "sindel")).toBe(true);
-    expect(statuses(h.events, "sindel")).not.toContain("ERROR");
+    await post(h.base, "/api/agents/aktham/message", { text: "draw a logo #flaky" });
+    await waitFor(() => statuses(h.events, "aktham").includes("DONE"));
+    expect(h.events.some((e) => e.type === "chat.reset" && e.thread === "aktham")).toBe(true);
+    expect(statuses(h.events, "aktham")).not.toContain("ERROR");
   });
 
   it("messages queued while busy each get their own job (no mixing, request ends on the user turn)", async () => {
     await post(h.base, "/api/pause", { paused: true });
-    await post(h.base, "/api/agents/sindel/message", { text: "draw the logo" });
-    await post(h.base, "/api/agents/sindel/message", { text: "write the jingle" });
+    await post(h.base, "/api/agents/aktham/message", { text: "draw the logo" });
+    await post(h.base, "/api/agents/aktham/message", { text: "write the jingle" });
     await post(h.base, "/api/pause", { paused: false });
     await waitFor(() => h.events.filter((e) => e.type === "counters").length >= 2);
     await h.app.hq.idle();
-    const thread = (await (await fetch(`${h.base}/api/agents/sindel/messages`)).json()) as ChatMessage[];
-    const replies = thread.filter((m) => m.author === "sindel" && m.content.includes("Picking up")).map((m) => m.content);
+    const thread = (await (await fetch(`${h.base}/api/agents/aktham/messages`)).json()) as ChatMessage[];
+    const replies = thread.filter((m) => m.author === "aktham" && m.content.includes("Picking up")).map((m) => m.content);
     expect(replies.length).toBe(2);
     expect(replies.some((r) => r.includes("draw the logo"))).toBe(true);
     expect(replies.some((r) => r.includes("write the jingle"))).toBe(true);
   });
 
   it("a failed delegated task is reported to the Boss in a way his history keeps", async () => {
-    await post(h.base, "/api/agents/kahn/message", { text: "@liukang animate the intro #fail" });
-    await waitFor(() => statuses(h.events, "liukang").includes("ERROR"));
+    await post(h.base, "/api/agents/cyrex/message", { text: "@nedal animate the intro #fail" });
+    await waitFor(() => statuses(h.events, "nedal").includes("ERROR"));
     await h.app.hq.idle();
-    const thread = (await (await fetch(`${h.base}/api/agents/kahn/messages`)).json()) as ChatMessage[];
-    const failed = thread.find((m) => m.author === "liukang" && m.content.startsWith("Report: FAILED"));
+    const thread = (await (await fetch(`${h.base}/api/agents/cyrex/messages`)).json()) as ChatMessage[];
+    const failed = thread.find((m) => m.author === "nedal" && m.content.startsWith("Report: FAILED"));
     expect(failed?.state).toBe("done");
   });
 
   it("global pause queues work; resume runs it", async () => {
     expect((await post(h.base, "/api/pause", { paused: true })).status).toBe(200);
-    const r = (await (await post(h.base, "/api/agents/liukang/message", { text: "walk cycle" })).json()) as { queued: number };
+    const r = (await (await post(h.base, "/api/agents/nedal/message", { text: "walk cycle" })).json()) as { queued: number };
     expect(r.queued).toBe(1);
     await new Promise((x) => setTimeout(x, 100));
-    expect(statuses(h.events, "liukang")).toEqual([]);
+    expect(statuses(h.events, "nedal")).toEqual([]);
     expect(h.events.some((e) => e.type === "paused" && e.paused)).toBe(true);
     await post(h.base, "/api/pause", { paused: false });
-    await waitFor(() => statuses(h.events, "liukang").includes("DONE"));
+    await waitFor(() => statuses(h.events, "nedal").includes("DONE"));
   });
 
   it("rejects bad requests with 4xx", async () => {
-    expect((await post(h.base, "/api/agents/kahn/message", { text: "" })).status).toBe(400);
+    expect((await post(h.base, "/api/agents/cyrex/message", { text: "" })).status).toBe(400);
     expect((await post(h.base, "/api/agents/nobody/message", { text: "hi" })).status).toBe(404);
     expect((await post(h.base, "/api/pause", { paused: "yes" })).status).toBe(400);
-    const bad = await fetch(`${h.base}/api/agents/kahn/message`, { method: "POST", headers: { "content-type": "application/json" }, body: "{not json" });
+    const bad = await fetch(`${h.base}/api/agents/cyrex/message`, { method: "POST", headers: { "content-type": "application/json" }, body: "{not json" });
     expect(bad.status).toBe(400);
-    const plain = await fetch(`${h.base}/api/agents/kahn/message`, { method: "POST", body: JSON.stringify({ text: "hi" }) });
+    const plain = await fetch(`${h.base}/api/agents/cyrex/message`, { method: "POST", body: JSON.stringify({ text: "hi" }) });
     expect(plain.status).toBe(415);
-    const big = await post(h.base, "/api/agents/kahn/message", { text: "x".repeat(70 * 1024) });
+    const big = await post(h.base, "/api/agents/cyrex/message", { text: "x".repeat(70 * 1024) });
     expect(big.status).toBe(413);
-    const foreign = await fetch(`${h.base}/api/agents/kahn/message`, {
+    const foreign = await fetch(`${h.base}/api/agents/cyrex/message`, {
       method: "POST",
       headers: { "content-type": "application/json", origin: "https://evil.example" },
       body: JSON.stringify({ text: "spend tokens" }),
@@ -232,7 +232,7 @@ describe("tools and persistence", () => {
       async turn(input: TurnInput): Promise<TurnResult> {
         seen.push(structuredClone(input));
         if (seen.length === 1) {
-          const call = { id: "t1", name: "assign_task", input: { agent: "sindel", task: "x" } };
+          const call = { id: "t1", name: "assign_task", input: { agent: "aktham", task: "x" } };
           return { text: "", toolCalls: [call], assistantContent: [{ type: "tool_use", ...call }] };
         }
         const call = { id: "t2", name: "report_result", input: { summary: "ok" } };
@@ -241,26 +241,26 @@ describe("tools and persistence", () => {
     };
     h = await boot(model);
     expect(seen.length).toBe(0);
-    await post(h.base, "/api/agents/sektor/message", { text: "delegate this" });
-    await waitFor(() => statuses(h.events, "sektor").includes("DONE"));
+    await post(h.base, "/api/agents/rajaie/message", { text: "delegate this" });
+    await waitFor(() => statuses(h.events, "rajaie").includes("DONE"));
     expect(seen[0]?.tools.map((t) => t.name)).toEqual(["update_status", "save_file", "read_file", "list_files", "report_result"]);
     const lastMsg = seen[1]?.messages.at(-1);
     expect(JSON.stringify(lastMsg)).toContain("Only the Boss can assign tasks");
-    expect(statuses(h.events, "sindel")).toEqual([]);
+    expect(statuses(h.events, "aktham")).toEqual([]);
   });
 
   it("chat history survives a restart (SQLite)", async () => {
     const db = join(dir, "persist.sqlite");
     h = await boot(undefined, db);
-    await post(h.base, "/api/agents/sonya/message", { text: "audit the team" });
-    await waitFor(() => statuses(h.events, "sonya").includes("DONE"));
+    await post(h.base, "/api/agents/razan/message", { text: "audit the team" });
+    await waitFor(() => statuses(h.events, "razan").includes("DONE"));
     await h.app.hq.idle();
     h.ws.close();
     await h.app.close();
     h = await boot(undefined, db);
-    const thread = (await (await fetch(`${h.base}/api/agents/sonya/messages`)).json()) as ChatMessage[];
+    const thread = (await (await fetch(`${h.base}/api/agents/razan/messages`)).json()) as ChatMessage[];
     expect(thread[0]).toMatchObject({ author: "owner", content: "audit the team" });
-    expect(thread.filter((m) => m.author === "sonya").length).toBeGreaterThanOrEqual(2);
+    expect(thread.filter((m) => m.author === "razan").length).toBeGreaterThanOrEqual(2);
     const snap = h.events[0];
     expect(snap?.type === "snapshot" && snap.tasksDone).toBe(1);
   });
@@ -281,7 +281,7 @@ describe("tools and persistence", () => {
         if (input.agent.isBoss) {
           if (input.messages.at(-1)?.role === "user" && typeof input.messages.at(-1)?.content === "string" && step === 0) {
             step = 1;
-            return call("b1", "assign_task", { agent: "nightwolf", task: "write the pitch" });
+            return call("b1", "assign_task", { agent: "zurub", task: "write the pitch" });
           }
           return call(`b${seen.length}`, "report_result", { summary: "delegated" });
         }
@@ -295,8 +295,8 @@ describe("tools and persistence", () => {
       },
     };
     h = await boot(model);
-    await post(h.base, "/api/agents/kahn/message", { text: "get a pitch written" });
-    await waitFor(() => statuses(h.events, "nightwolf").includes("DONE"));
+    await post(h.base, "/api/agents/cyrex/message", { text: "get a pitch written" });
+    await waitFor(() => statuses(h.events, "zurub").includes("DONE"));
     await h.app.hq.idle();
 
     const toolResult = (i: number) => JSON.stringify(seen.filter((s) => !s.agent.isBoss)[i]?.messages.at(-1));
@@ -304,12 +304,12 @@ describe("tools and persistence", () => {
     expect(toolResult(2)).toContain("Saved pitch.md v2");
     expect(toolResult(3)).toContain("Bad file name");
     expect(toolResult(4)).toContain("# Pitch v2");
-    expect(toolResult(5)).toContain("pitch.md v2 by Nightwolf");
+    expect(toolResult(5)).toContain("pitch.md v2 by Zurub");
 
     const fileEvents = h.events.filter((e) => e.type === "file");
     expect(fileEvents.map((e) => (e.type === "file" ? e.file.version : 0))).toEqual([1, 2]);
     const list = (await (await fetch(`${h.base}/api/files`)).json()) as { id: string; name: string; version: number; agentId: string }[];
-    expect(list.map((f) => [f.name, f.version, f.agentId])).toEqual([["pitch.md", 2, "nightwolf"], ["pitch.md", 1, "nightwolf"]]);
+    expect(list.map((f) => [f.name, f.version, f.agentId])).toEqual([["pitch.md", 2, "zurub"], ["pitch.md", 1, "zurub"]]);
     const v1 = (await (await fetch(`${h.base}/api/files/${list[1]?.id}`)).json()) as { content: string; title: string };
     expect(v1).toMatchObject({ content: "# Pitch v1", title: "Pitch" });
     const dl = await fetch(`${h.base}/api/files/${list[0]?.id}/download`);
@@ -318,19 +318,19 @@ describe("tools and persistence", () => {
     expect(await dl.text()).toBe("# Pitch v2");
     expect((await fetch(`${h.base}/api/files/nope`)).status).toBe(404);
 
-    const boss = (await (await fetch(`${h.base}/api/agents/kahn/messages`)).json()) as ChatMessage[];
-    expect(boss.find((m) => m.author === "nightwolf")?.content).toBe("Report: pitch drafted\nFiles: pitch.md (v1), pitch.md (v2)");
+    const boss = (await (await fetch(`${h.base}/api/agents/cyrex/messages`)).json()) as ChatMessage[];
+    expect(boss.find((m) => m.author === "zurub")?.content).toBe("Report: pitch drafted\nFiles: pitch.md (v1), pitch.md (v2)");
     expect(h.events.some((e) => e.type === "activity" && e.entry.kind === "file")).toBe(true);
     expect(h.rawProblems).toEqual([]);
   });
 
   it("MOCK workers deliver a file with their report", async () => {
     h = await boot();
-    await post(h.base, "/api/agents/kahn/message", { text: "@nightwolf draft the trailer script" });
-    await waitFor(() => statuses(h.events, "nightwolf").includes("DONE"));
+    await post(h.base, "/api/agents/cyrex/message", { text: "@zurub draft the trailer script" });
+    await waitFor(() => statuses(h.events, "zurub").includes("DONE"));
     await h.app.hq.idle();
     const list = (await (await fetch(`${h.base}/api/files`)).json()) as { name: string; agentId: string }[];
-    expect(list).toEqual([expect.objectContaining({ name: "nightwolf-draft-the-trailer-script.md", agentId: "nightwolf" })]);
+    expect(list).toEqual([expect.objectContaining({ name: "zurub-draft-the-trailer-script.md", agentId: "zurub" })]);
     const snap = (await (await fetch(`${h.base}/api/state`)).json()) as { files: unknown[] };
     expect(snap.files).toHaveLength(1);
   });
@@ -346,9 +346,9 @@ describe("public mode (HQ_OWNER_TOKEN)", () => {
     const snap = h.events[0];
     expect(snap?.type === "snapshot" && snap.activity).toEqual([]);
     expect((await (await fetch(`${h.base}/api/me`)).json())).toEqual({ role: "viewer", public: true, canRead: false, canAct: false });
-    expect((await post(h.base, "/api/agents/kahn/message", { text: "hi" })).status).toBe(401);
+    expect((await post(h.base, "/api/agents/cyrex/message", { text: "hi" })).status).toBe(401);
     expect((await post(h.base, "/api/pause", { paused: true })).status).toBe(401);
-    expect((await fetch(`${h.base}/api/agents/kahn/messages`)).status).toBe(401);
+    expect((await fetch(`${h.base}/api/agents/cyrex/messages`)).status).toBe(401);
     expect((await fetch(`${h.base}/api/files`)).status).toBe(401);
     // a cross-site page is still refused
     expect((await fetch(`${h.base}/api/state`, { headers: { origin: "https://evil.example" } })).status).toBe(403);
@@ -365,13 +365,13 @@ describe("public mode (HQ_OWNER_TOKEN)", () => {
     expect(ok.headers.get("set-cookie")).toContain("HttpOnly");
     const me = (await (await fetch(`${h.base}/api/me`, { headers: { cookie } })).json()) as { role: string };
     expect(me.role).toBe("owner");
-    const res = await fetch(`${h.base}/api/agents/kahn/message`, {
+    const res = await fetch(`${h.base}/api/agents/cyrex/message`, {
       method: "POST",
       headers: { "content-type": "application/json", cookie },
-      body: JSON.stringify({ text: "@nightwolf research the market" }),
+      body: JSON.stringify({ text: "@zurub research the market" }),
     });
     expect(res.status).toBe(202);
-    await waitFor(() => statuses(h.events, "nightwolf").includes("DONE"));
+    await waitFor(() => statuses(h.events, "zurub").includes("DONE"));
     await h.app.hq.idle();
     // h.ws is a viewer: it saw the office move, but no chat, activity, file or task text
     expect(h.events.some((e) => e.type.startsWith("chat.") || e.type === "activity" || e.type === "file")).toBe(false);
@@ -382,7 +382,7 @@ describe("public mode (HQ_OWNER_TOKEN)", () => {
   it("HQ_PUBLIC_DETAIL=full lets viewers read but still not act", async () => {
     h = await boot(undefined, undefined, { ownerToken: TOKEN, publicDetail: "full" });
     expect((await fetch(`${h.base}/api/files`)).status).toBe(200);
-    expect((await post(h.base, "/api/agents/kahn/message", { text: "hi" })).status).toBe(401);
+    expect((await post(h.base, "/api/agents/cyrex/message", { text: "hi" })).status).toBe(401);
   });
 
   it("rejects short owner tokens", async () => {

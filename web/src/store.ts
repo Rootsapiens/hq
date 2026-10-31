@@ -36,7 +36,7 @@ let state: HqState = {
   threads: {},
   files: [],
   openFile: null,
-  selected: "kahn",
+  selected: "cyrex",
   tab: "chat",
   access: { public: false, canRead: true, canAct: true },
 };

@@ -76,41 +76,41 @@ test("desktop: movement, Boss delegation, streaming chat, done, error, pause", a
   await input.fill("@raj");
   await expect(page.getByTestId("mention-menu")).toBeVisible();
   await input.press("Tab");
-  await expect(input).toHaveValue("@sektor ");
-  await input.pressSequentially("fix the login build and @sindel draw the new logo");
+  await expect(input).toHaveValue("@rajaie ");
+  await input.pressSequentially("fix the login build and @aktham draw the new logo");
   await page.getByTestId("chat-send").click();
 
   // streamed reply appears in the Boss chat
-  const bossMsg = page.locator('[data-testid="chat-message"][data-author="kahn"]').first();
+  const bossMsg = page.locator('[data-testid="chat-message"][data-author="cyrex"]').first();
   await expect(bossMsg).toContainText("[MOCK] On it");
 
   // delegation: Boss + both targets walk to the Meeting Room
-  await waitChar(page, "kahn", (c) => c.status === "MEETING");
-  await waitChar(page, "sektor", (c) => c.status === "MEETING" && c.room === "meeting-room" && !c.moving, 20_000);
-  await waitChar(page, "kahn", (c) => c.room === "meeting-room" && !c.moving, 20_000);
+  await waitChar(page, "cyrex", (c) => c.status === "MEETING");
+  await waitChar(page, "rajaie", (c) => c.status === "MEETING" && c.room === "meeting-room" && !c.moving, 20_000);
+  await waitChar(page, "cyrex", (c) => c.room === "meeting-room" && !c.moving, 20_000);
   await page.screenshot({ path: `${SHOTS}/02-meeting-desktop.png` });
 
-  // work: Sektor goes to his desk in Engineering and types with the "..." bubble
-  const working = await waitChar(page, "sektor", (c) => (c.status === "WORKING" || c.status === "THINKING") && c.room === "engineering" && c.badge === "dots", 30_000);
+  // work: Rajaie goes to his desk in Engineering and types with the "..." bubble
+  const working = await waitChar(page, "rajaie", (c) => (c.status === "WORKING" || c.status === "THINKING") && c.room === "engineering" && c.badge === "dots", 30_000);
   expect(working.room).toBe("engineering");
   await expect(page.getByTestId("count-working")).not.toHaveText(/^0 /);
   await page.screenshot({ path: `${SHOTS}/03-working-desktop.png` });
 
   // done: green check, report back in the Boss chat, done counter up
-  await waitChar(page, "sektor", (c) => c.status === "DONE" && c.badge === "check", 30_000);
-  await expect(page.locator('[data-testid="chat-message"][data-author="sektor"]').first()).toContainText("Report:");
+  await waitChar(page, "rajaie", (c) => c.status === "DONE" && c.badge === "check", 30_000);
+  await expect(page.locator('[data-testid="chat-message"][data-author="rajaie"]').first()).toContainText("Report:");
   await expect(page.getByTestId("count-done")).not.toHaveText(/^0 /);
   await page.screenshot({ path: `${SHOTS}/04-done-desktop.png` });
   // after 5 s DONE falls back to IDLE and the agent wanders again
-  await waitChar(page, "sektor", (c) => c.status === "IDLE" && c.badge === null, 15_000);
+  await waitChar(page, "rajaie", (c) => c.status === "IDLE" && c.badge === null, 15_000);
 
-  // error: Nightwolf fails all retries -> red "!" and needs-input counter
+  // error: Zurub fails all retries -> red "!" and needs-input counter
   await page.getByTestId("tab-roster").click();
-  await page.getByTestId("roster-nightwolf").click();
+  await page.getByTestId("roster-zurub").click();
   await expect(page.getByTestId("tab-chat")).toHaveAttribute("aria-selected", "true");
   await page.getByTestId("chat-input").fill("draft the investor pitch #fail");
   await page.getByTestId("chat-send").click();
-  await waitChar(page, "nightwolf", (c) => c.status === "ERROR" && c.badge === "alert", 30_000);
+  await waitChar(page, "zurub", (c) => c.status === "ERROR" && c.badge === "alert", 30_000);
   await expect(page.getByTestId("count-needs")).toHaveText(/^1 /);
   await expect(page.locator('[data-testid="chat-message"][data-author="system"]').last()).toContainText("Error:");
   await page.screenshot({ path: `${SHOTS}/05-error-desktop.png` });
@@ -118,19 +118,19 @@ test("desktop: movement, Boss delegation, streaming chat, done, error, pause", a
   // global pause: new work waits
   await page.getByTestId("pause").click();
   await expect(page.getByTestId("paused-banner")).toBeVisible();
-  await page.getByTestId("thread-picker").getByText("Liu Kang").click();
+  await page.getByTestId("thread-picker").getByText("Nedal").click();
   await page.getByTestId("chat-input").fill("animate a walk cycle");
   await page.getByTestId("chat-send").click();
   await page.waitForTimeout(1500);
-  expect((await char(page, "liukang"))?.status).toBe("IDLE");
+  expect((await char(page, "nedal"))?.status).toBe("IDLE");
   await page.getByTestId("tab-roster").click();
-  await expect(page.getByTestId("roster-liukang")).toContainText("1 queued");
+  await expect(page.getByTestId("roster-nedal")).toContainText("1 queued");
   await page.screenshot({ path: `${SHOTS}/06-paused-roster-desktop.png` });
   await page.getByTestId("pause").click();
-  await waitChar(page, "liukang", (c) => c.status === "THINKING" || c.status === "WORKING", 10_000);
+  await waitChar(page, "nedal", (c) => c.status === "THINKING" || c.status === "WORKING", 10_000);
 
   await page.getByTestId("tab-activity").click();
-  await expect(page.getByTestId("activity")).toContainText("Shao Kahn -> Sektor");
+  await expect(page.getByTestId("activity")).toContainText("Cyrex -> Rajaie");
   await page.screenshot({ path: `${SHOTS}/07-activity-desktop.png` });
 });
 
@@ -142,16 +142,16 @@ test("380 px: layout fits, chat and delegation work", async ({ page }) => {
   await expect(page.getByTestId("office-canvas")).toBeVisible();
   await page.screenshot({ path: `${SHOTS}/08-mobile-380.png` });
 
-  await page.getByTestId("chat-input").fill("@sonya audit this week's agent reports");
+  await page.getByTestId("chat-input").fill("@razan audit this week's agent reports");
   await page.getByTestId("chat-send").click();
-  await waitChar(page, "sonya", (c) => c.status === "MEETING");
-  await expect(page.locator('[data-testid="chat-message"][data-author="kahn"]').last()).toContainText("[MOCK]");
+  await waitChar(page, "razan", (c) => c.status === "MEETING");
+  await expect(page.locator('[data-testid="chat-message"][data-author="cyrex"]').last()).toContainText("[MOCK]");
   await page.screenshot({ path: `${SHOTS}/09-mobile-380-delegation.png` });
 
   // click-to-focus from the roster
   await page.getByTestId("tab-roster").click();
-  await page.getByTestId("roster-sonya").click();
-  await waitChar(page, "sonya", (c) => c.status === "DONE" || c.status === "WORKING" || c.status === "THINKING", 30_000);
+  await page.getByTestId("roster-razan").click();
+  await waitChar(page, "razan", (c) => c.status === "DONE" || c.status === "WORKING" || c.status === "THINKING", 30_000);
   await page.waitForTimeout(800);
   await page.screenshot({ path: `${SHOTS}/10-mobile-380-focus.png` });
 });

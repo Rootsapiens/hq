@@ -33,12 +33,12 @@ shown as a `MOCK` badge in the top bar. Never commit `.env`.
 
 | Agent | Role | Room | Shirt |
 |---|---|---|---|
-| Shao Kahn | Agency Director, the only one with `assign_task` | Agency Desk | gold |
-| Nightwolf | Strategy & Research: briefs, calendars, trends | Strategy & Copy | green |
-| Liu Kang | Content, Copy & Reels: captions, hooks, scripts | Reels Studio | orange |
-| Sindel | Creative Director: brand kit, AI imagery, carousels | Creative Studio | pink |
-| Sektor | AI Production & Data: reel specs, scheduling plans, platform | Production & Data | blue |
-| Sonya | Quality & Client Success: scored QA gate, onboarding, watchdog | Quality Desk | purple |
+| Cyrex | CEO, the only one with `assign_task` | Agency Desk | gold |
+| Zurub | CSO, Strategy & Research: briefs, calendars, trends | Strategy & Copy | green |
+| Nedal | CMO, Content, Copy & Reels: captions, hooks, scripts | Reels Studio | orange |
+| Aktham | CCO, Creative: brand kit, AI imagery, carousels | Creative Studio | pink |
+| Rajaie | CTO, AI Production & Data: reel specs, scheduling plans, platform | Production & Data | blue |
+| Razan | CPO, People & Quality: scored QA gate, onboarding, watchdog | Quality Desk | purple |
 
 System prompts are short summaries of the agent files; the agent files themselves are not read at runtime.
 

@@ -155,7 +155,7 @@ export function Chat() {
       <div ref={listRef} className="scroll-thin flex min-h-0 flex-1 flex-col gap-2 overflow-y-auto px-3 py-3" data-testid="chat-list">
         {messages.length === 0 && (
           <p className="mt-6 text-center text-xs text-slate-500">
-            {agent?.isBoss ? "Brief the Boss. Use @name to delegate, e.g. “@sektor fix the build”." : `No messages with ${agent?.name ?? "this agent"} yet.`}
+            {agent?.isBoss ? "Brief the Boss. Use @name to delegate, e.g. “@rajaie fix the build”." : `No messages with ${agent?.name ?? "this agent"} yet.`}
           </p>
         )}
         {messages.map((m) => (
@@ -190,7 +190,7 @@ export function Chat() {
             value={text}
             onChange={(e) => setText(e.target.value)}
             onKeyDown={onKey}
-            placeholder={agent?.isBoss ? "Message Shao Kahn… (@name to delegate)" : `Message ${agent?.name ?? ""}…`}
+            placeholder={agent?.isBoss ? "Message Cyrex… (@name to delegate)" : `Message ${agent?.name ?? ""}…`}
             className="min-h-[40px] flex-1 resize-none rounded-md bg-ink-850 px-3 py-2 text-sm text-slate-100 placeholder:text-slate-500 ring-1 ring-ink-600 outline-none focus:ring-sky-500"
           />
           <button

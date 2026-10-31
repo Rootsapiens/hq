@@ -11,11 +11,11 @@ export interface MockOptions {
 }
 
 const KEYWORDS: ReadonlyArray<[RegExp, string]> = [
-  [/\b(qa|quality|review|check|approve|brand safety|onboard\w*|team|client success)\b/i, "sonya"],
-  [/\b(reel|reels|script|caption|captions|copy|hook|hooks|story|stories)\b/i, "liukang"],
-  [/\b(design|visual|image|carousel|thumbnail|brand kit|logo|cover)\b/i, "sindel"],
-  [/\b(edit|video|voice|schedul\w*|analytics|report|code|build|fix|deploy|platform|automat\w*)\b/i, "sektor"],
-  [/\b(research|trend|trends|competitor|audience|brief|strategy|calendar|plan)\b/i, "nightwolf"],
+  [/\b(qa|quality|review|check|approve|brand safety|onboard\w*|team|client success)\b/i, "razan"],
+  [/\b(reel|reels|script|caption|captions|copy|hook|hooks|story|stories)\b/i, "nedal"],
+  [/\b(design|visual|image|carousel|thumbnail|brand kit|logo|cover)\b/i, "aktham"],
+  [/\b(edit|video|voice|schedul\w*|analytics|report|code|build|fix|deploy|platform|automat\w*)\b/i, "rajaie"],
+  [/\b(research|trend|trends|competitor|audience|brief|strategy|calendar|plan)\b/i, "zurub"],
 ];
 
 class MockApiError extends Error {
@@ -101,7 +101,7 @@ export class MockModel implements ModelClient {
         let targets = extractMentions(userText).filter((m) => AGENTS.some((a) => a.id === m && !a.isBoss));
         if (targets.length === 0) {
           const hit = KEYWORDS.find(([re]) => re.test(task));
-          targets = [hit ? hit[1] : "sektor"];
+          targets = [hit ? hit[1] : "rajaie"];
         }
         const names = targets.map((t) => AGENTS.find((a) => a.id === t)?.name ?? t);
         text = `[MOCK] On it. Routing this to ${names.join(" and ")}. I'll meet them in the Meeting Room and approve only from proof.`;

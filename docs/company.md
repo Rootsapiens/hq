@@ -10,37 +10,38 @@ The owner (Nadeem) is the only one who publishes, spends or talks to clients.
                          Owner (Nadeem)
               publishes · spends · signs · talks to clients
                                │
-                  Shao Kahn: Agency Director
+                       Cyrex: CEO
        priorities, content calendar, routing, final approval
                                │
-   ┌──────────────┬────────────┼─────────────┬──────────────────┐
-Nightwolf      Liu Kang      Sindel         Sektor            Sonya
-Strategy &     Content,      Creative       AI Production     Quality &
-Research       Copy & Reels  Director       & Data            Client Success
+   ┌────────────┬──────────────┼──────────────┬──────────────┐
+ Zurub        Nedal          Aktham         Rajaie         Razan
+ CSO          CMO            CCO            CTO            CPO
+ Strategy &   Content, Copy  Creative       AI Production  People &
+ Research     & Reels                       & Data         Quality
 ```
 
 | Agent | Owns | Delivers (as files) |
 |---|---|---|
-| **Shao Kahn**: Agency Director | Client priorities, calendar, routing, final sign-off | Weekly priorities, approvals |
-| **Nightwolf**: Strategy & Research | Audience, platforms, pillars, trends, competitors, KPIs | Brief per post or campaign, content calendar, trend scan (sourced) |
-| **Liu Kang**: Content, Copy & Reels | Voice, hooks, captions, scripts | Post copy, captions, hashtags, CTAs, reel and story scripts with 3 hook options |
-| **Sindel**: Creative Director | Brand kit, visual direction, AI imagery | Image prompts (with negatives), carousel layouts, thumbnails, aspect ratios and safe zones |
-| **Sektor**: AI Production & Data | Reel production, AI video and voice, scheduling, HQ platform | Edit spec, export settings, licensed music cues, scheduling plan, performance report from real analytics |
-| **Sonya**: Quality & Client Success | Quality gate, brand safety, rights, onboarding, watchdog | Scored QA file per asset, onboarding checklists, audit notes to the owner |
+| **Cyrex**: CEO | Client priorities, calendar, routing, final sign-off | Weekly priorities, approvals |
+| **Zurub**: CSO, Strategy & Research | Audience, platforms, pillars, trends, competitors, KPIs | Brief per post or campaign, content calendar, trend scan (sourced) |
+| **Nedal**: CMO, Content, Copy & Reels | Voice, hooks, captions, scripts | Post copy, captions, hashtags, CTAs, reel and story scripts with 3 hook options |
+| **Aktham**: CCO, Creative | Brand kit, visual direction, AI imagery | Image prompts (with negatives), carousel layouts, thumbnails, aspect ratios and safe zones |
+| **Rajaie**: CTO, AI Production & Data | Reel production, AI video and voice, scheduling, HQ platform | Edit spec, export settings, licensed music cues, scheduling plan, performance report from real analytics |
+| **Razan**: CPO, People & Quality | Quality gate, brand safety, rights, onboarding, watchdog | Scored QA file per asset, onboarding checklists, audit notes to the owner |
 
 ## Pipeline
 
 ```
 1 BRIEF  ──▶  2 CREATE  ──▶  3 PRODUCE  ──▶  4 QA  ──▶  5 APPROVE  ──▶  6 PUBLISH
-Nightwolf     Liu Kang       Sektor          Sonya     Shao Kahn       Owner only
-              + Sindel                        │
+Zurub     Nedal       Rajaie          Razan     Cyrex       Owner only
+              + Aktham                        │
                     ▲      fail: exact fixes  │
                     └─────────────────────────┘
 ```
 
 Each step starts only when the previous step's file exists. Files name the client, platform and post id.
 
-## Quality gate (Sonya)
+## Quality gate (Razan)
 
 Ten checks, each scored 0 or 1. Pass at **8/10 or higher** and **no fail** on the four blocking checks (marked ●).
 
@@ -57,6 +58,10 @@ Ten checks, each scored 0 or 1. Pass at **8/10 or higher** and **no fail** on th
 | 9 | Accessibility: captions on video, alt text, contrast on a phone | |
 | 10 | Clear call to action | |
 
+## Hiring
+
+New agents report to one of the C-suite and are named after Mortal Kombat 3 characters.
+
 ## Rules every agent follows
 
 - No publishing, scheduling on live accounts, ad spend or client contact. The owner does those.
@@ -66,10 +71,10 @@ Ten checks, each scored 0 or 1. Pass at **8/10 or higher** and **no fail** on th
 
 ## Try it in HQ
 
-Sign in as owner and send Shao Kahn, for example:
+Sign in as owner and send Cyrex, for example:
 
-> Campaign for a coffee shop launch on Instagram: @nightwolf write the brief and a 2-week calendar,
-> then @liukang 3 reel scripts and 5 captions, @sindel the carousel and thumbnail direction,
-> @sektor the reel edit spec, and @sonya QA everything before I see it.
+> Campaign for a coffee shop launch on Instagram: @zurub write the brief and a 2-week calendar,
+> then @nedal 3 reel scripts and 5 captions, @aktham the carousel and thumbnail direction,
+> @rajaie the reel edit spec, and @razan QA everything before I see it.
 
 Configuration lives in `shared/company.ts` (name, rooms) and `server/agents.config.ts` (roles, pipeline, rules).

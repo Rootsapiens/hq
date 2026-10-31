@@ -56,9 +56,9 @@ export function OfficeCanvas({ className = "" }: { className?: string }) {
   }, []);
 
   return (
-    <div className={`relative overflow-hidden bg-ink-950 ${className}`}>
+    <div className={`relative overflow-hidden bg-[#f1f2f4] ${className}`}>
       <div ref={host} className="absolute inset-0 touch-none" />
-      <div className="pointer-events-none absolute bottom-2 left-2 hidden font-pixel text-[7px] text-slate-500 sm:block">
+      <div className="pointer-events-none absolute bottom-2 left-2 hidden text-[11px] text-slate-500 sm:block">
         drag to pan · wheel/pinch to zoom · click an agent
       </div>
       <div className="absolute right-2 top-2 flex gap-1">
