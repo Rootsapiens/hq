@@ -6,7 +6,11 @@ import { findPath, type Point } from "./astar";
 import { activityFor, badgeFor, goalFor, pickWanderTile } from "./behavior";
 import { BRAIN_CENTER, FURNITURE, GRID_H, GRID_W, OFFICE_GRID, ROOMS, ROOM_W, isWall, roomAt, type Furniture } from "./map";
 import { dirFromStep, toScreen, type Dir } from "./iso";
-import { SPRITE_H, SPRITE_W, loadOverride, paletteFor, sheetCanvas } from "./sprites";
+import { SPRITE_H as RAW_H, SPRITE_W, loadOverride, paletteFor, sheetCanvas } from "./sprites";
+
+/** Characters draw at 2x their pixel size so they read at whole-office zoom. */
+const CHAR_SCALE = 2;
+const SPRITE_H = RAW_H * CHAR_SCALE;
 
 TextureStyle.defaultOptions.scaleMode = "nearest";
 
@@ -44,7 +48,7 @@ function framesFrom(canvas: HTMLCanvasElement): Frames {
   const base = Texture.from(canvas);
   base.source.scaleMode = "nearest";
   const cut = (col: number, row: number) =>
-    new Texture({ source: base.source, frame: new Rectangle(col * SPRITE_W, row * SPRITE_H, SPRITE_W, SPRITE_H) });
+    new Texture({ source: base.source, frame: new Rectangle(col * SPRITE_W, row * RAW_H, SPRITE_W, RAW_H) });
   return {
     front: [0, 1, 2, 3].map((i) => cut(i, 0)),
     back: [0, 1, 2, 3].map((i) => cut(i, 1)),
@@ -82,22 +86,23 @@ class Character {
     this.pos = tileCenter(start);
     const color = hexNum(view.color);
 
-    this.shadow.ellipse(0, 0, 7, 3.5).fill({ color: 0x000000, alpha: 0.35 });
-    this.ring.ellipse(0, 0, 10, 5).stroke({ width: 1.5, color, alpha: 0.95 });
+    this.shadow.ellipse(0, 0, 12, 6).fill({ color: 0x000000, alpha: 0.35 });
+    this.ring.ellipse(0, 0, 16, 8).stroke({ width: 1.5, color, alpha: 0.95 });
     this.ring.visible = false;
     this.body = new Sprite(frames.front[0]);
     this.body.anchor.set(0.5, 1);
+    this.body.scale.set(CHAR_SCALE);
 
     this.label = new Text({
       text: view.name.toUpperCase(),
-      style: { fontFamily: PIXEL_FONT, fontSize: 6, fill: 0xffffff, stroke: { color: 0x0b0a10, width: 2 } },
+      style: { fontFamily: PIXEL_FONT, fontSize: 9, fill: 0xffffff, stroke: { color: 0x0b0a10, width: 2 } },
       resolution: 4,
     });
     this.label.anchor.set(0.5, 1);
     this.label.position.set(0, -SPRITE_H - 2);
     const plate = new Graphics();
     const w = this.label.width + 6;
-    plate.roundRect(-w / 2, -SPRITE_H - 11, w, 9, 2).fill({ color: shade(color, 0.45), alpha: 0.85 });
+    plate.roundRect(-w / 2, -SPRITE_H - 14, w, 12, 2).fill({ color: shade(color, 0.45), alpha: 0.85 });
 
     this.badgeText = new Text({
       text: "",
@@ -106,13 +111,13 @@ class Character {
     });
     this.badgeText.anchor.set(0.5, 0.5);
     this.badge.addChild(this.badgeG, this.badgeText);
-    this.badge.position.set(0, -SPRITE_H - 20);
+    this.badge.position.set(0, -SPRITE_H - 26);
     this.badge.visible = false;
 
     this.root.addChild(this.shadow, this.ring, this.body, plate, this.label, this.badge);
     this.root.eventMode = "static";
     this.root.cursor = "pointer";
-    this.root.hitArea = new Rectangle(-10, -SPRITE_H - 12, 20, SPRITE_H + 16);
+    this.root.hitArea = new Rectangle(-16, -SPRITE_H - 16, 32, SPRITE_H + 20);
     this.root.on("pointertap", () => onTap(view.id));
   }
 
@@ -202,7 +207,7 @@ class Character {
     else if (seated && act === "desk") tex = this.frames.type[Math.floor(this.animT / 220) % 2];
     else tex = (back ? this.frames.back : this.frames.front)[0];
     if (tex) this.body.texture = tex;
-    this.body.scale.x = mirror ? -1 : 1;
+    this.body.scale.x = mirror ? -CHAR_SCALE : CHAR_SCALE;
 
     // badge
     let kind = badgeFor(status);
@@ -359,7 +364,7 @@ export class Office {
     for (const r of ROOMS) {
       const t = new Text({
         text: r.label,
-        style: { fontFamily: PIXEL_FONT, fontSize: 6, fill: 0xffffff },
+        style: { fontFamily: PIXEL_FONT, fontSize: 9, fill: 0xffffff },
         resolution: 4,
       });
       t.alpha = 0.55;
@@ -476,7 +481,7 @@ export class Office {
     this.objects.addChild(this.brain);
     this.brainLabel = new Text({
       text: "THE BRAIN",
-      style: { fontFamily: PIXEL_FONT, fontSize: 6, fill: 0xc4b5fd, stroke: { color: 0x0b0a10, width: 2 } },
+      style: { fontFamily: PIXEL_FONT, fontSize: 9, fill: 0xc4b5fd, stroke: { color: 0x0b0a10, width: 2 } },
       resolution: 4,
     });
     this.brainLabel.anchor.set(0.5, 0);
@@ -601,7 +606,7 @@ export class Office {
       if (c) {
         const s = toScreen(c.pos.x, c.pos.y);
         const sx = this.world.x + s.x * this.zoom;
-        const sy = this.world.y + (s.y - 12) * this.zoom;
+        const sy = this.world.y + (s.y - 24) * this.zoom;
         this.zoomAt(sx, sy, 1.8);
       }
     }
@@ -656,7 +661,7 @@ export class Office {
         const s = toScreen(c.pos.x, c.pos.y);
         this.camTarget = {
           x: this.app.screen.width / 2 - s.x * this.zoom,
-          y: this.app.screen.height / 2 - (s.y - 12) * this.zoom,
+          y: this.app.screen.height / 2 - (s.y - 24) * this.zoom,
         };
       }
     }
