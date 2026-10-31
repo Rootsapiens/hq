@@ -6,7 +6,11 @@ import { findPath, type Point } from "./astar";
 import { activityFor, badgeFor, goalFor, pickWanderTile } from "./behavior";
 import { BRAIN_CENTER, FURNITURE, GRID_H, GRID_W, OFFICE_GRID, ROOMS, ROOM_W, isWall, roomAt, type Furniture } from "./map";
 import { dirFromStep, toScreen, type Dir } from "./iso";
-import { SPRITE_H, SPRITE_W, loadOverride, paletteFor, sheetCanvas } from "./sprites";
+import { SPRITE_H as RAW_H, SPRITE_W, loadOverride, paletteFor, sheetCanvas } from "./sprites";
+
+/** Characters draw at 2x their pixel size so they read at whole-office zoom. */
+const CHAR_SCALE = 2;
+const SPRITE_H = RAW_H * CHAR_SCALE;
 
 TextureStyle.defaultOptions.scaleMode = "nearest";
 
@@ -44,7 +48,7 @@ function framesFrom(canvas: HTMLCanvasElement): Frames {
   const base = Texture.from(canvas);
   base.source.scaleMode = "nearest";
   const cut = (col: number, row: number) =>
-    new Texture({ source: base.source, frame: new Rectangle(col * SPRITE_W, row * SPRITE_H, SPRITE_W, SPRITE_H) });
+    new Texture({ source: base.source, frame: new Rectangle(col * SPRITE_W, row * RAW_H, SPRITE_W, RAW_H) });
   return {
     front: [0, 1, 2, 3].map((i) => cut(i, 0)),
     back: [0, 1, 2, 3].map((i) => cut(i, 1)),
@@ -82,22 +86,23 @@ class Character {
     this.pos = tileCenter(start);
     const color = hexNum(view.color);
 
-    this.shadow.ellipse(0, 0, 7, 3.5).fill({ color: 0x000000, alpha: 0.35 });
-    this.ring.ellipse(0, 0, 10, 5).stroke({ width: 1.5, color, alpha: 0.95 });
+    this.shadow.ellipse(0, 0, 12, 6).fill({ color: 0x000000, alpha: 0.35 });
+    this.ring.ellipse(0, 0, 16, 8).stroke({ width: 1.5, color, alpha: 0.95 });
     this.ring.visible = false;
     this.body = new Sprite(frames.front[0]);
     this.body.anchor.set(0.5, 1);
+    this.body.scale.set(CHAR_SCALE);
 
     this.label = new Text({
       text: view.name.toUpperCase(),
-      style: { fontFamily: PIXEL_FONT, fontSize: 6, fill: 0xffffff, stroke: { color: 0x0b0a10, width: 2 } },
+      style: { fontFamily: PIXEL_FONT, fontSize: 9, fill: 0xffffff, stroke: { color: 0x0b0a10, width: 2 } },
       resolution: 4,
     });
     this.label.anchor.set(0.5, 1);
     this.label.position.set(0, -SPRITE_H - 2);
     const plate = new Graphics();
     const w = this.label.width + 6;
-    plate.roundRect(-w / 2, -SPRITE_H - 11, w, 9, 2).fill({ color: shade(color, 0.45), alpha: 0.85 });
+    plate.roundRect(-w / 2, -SPRITE_H - 14, w, 12, 2).fill({ color: shade(color, 0.45), alpha: 0.85 });
 
     this.badgeText = new Text({
       text: "",
@@ -106,13 +111,13 @@ class Character {
     });
     this.badgeText.anchor.set(0.5, 0.5);
     this.badge.addChild(this.badgeG, this.badgeText);
-    this.badge.position.set(0, -SPRITE_H - 20);
+    this.badge.position.set(0, -SPRITE_H - 26);
     this.badge.visible = false;
 
     this.root.addChild(this.shadow, this.ring, this.body, plate, this.label, this.badge);
     this.root.eventMode = "static";
     this.root.cursor = "pointer";
-    this.root.hitArea = new Rectangle(-10, -SPRITE_H - 12, 20, SPRITE_H + 16);
+    this.root.hitArea = new Rectangle(-16, -SPRITE_H - 16, 32, SPRITE_H + 20);
     this.root.on("pointertap", () => onTap(view.id));
   }
 
@@ -202,7 +207,7 @@ class Character {
     else if (seated && act === "desk") tex = this.frames.type[Math.floor(this.animT / 220) % 2];
     else tex = (back ? this.frames.back : this.frames.front)[0];
     if (tex) this.body.texture = tex;
-    this.body.scale.x = mirror ? -1 : 1;
+    this.body.scale.x = mirror ? -CHAR_SCALE : CHAR_SCALE;
 
     // badge
     let kind = badgeFor(status);
@@ -295,7 +300,7 @@ export class Office {
   async init(host: HTMLElement): Promise<void> {
     await this.app.init({
       resizeTo: host,
-      background: 0x0d0c14,
+      background: 0xf1f2f4, // bright, store-like backdrop
       antialias: false,
       autoDensity: true,
       resolution: Math.min(window.devicePixelRatio || 1, 2),
@@ -347,8 +352,8 @@ export class Office {
       for (let x = 0; x < GRID_W; x++) {
         if (isWall(x, y)) continue;
         const r = roomAt(x, y);
-        const base = r ? r.floor : 0x34303f; // doorways
-        const c = (x + y) % 2 === 0 ? base : shade(base, 1.08);
+        const base = r ? r.floor : 0xdcd6cc; // doorways
+        const c = (x + y) % 2 === 0 ? base : shade(base, 0.975); // large stone tiles, barely visible joints
         const a = toScreen(x, y);
         const b = toScreen(x + 1, y);
         const cc = toScreen(x + 1, y + 1);
@@ -359,10 +364,10 @@ export class Office {
     for (const r of ROOMS) {
       const t = new Text({
         text: r.label,
-        style: { fontFamily: PIXEL_FONT, fontSize: 6, fill: 0xffffff },
+        style: { fontFamily: PIXEL_FONT, fontSize: 9, fill: 0x6b7280 },
         resolution: 4,
       });
-      t.alpha = 0.55;
+      t.alpha = 0.8;
       t.anchor.set(0.5, 0.5);
       const p = toScreen(r.x0 + ROOM_W / 2 + 0.5, r.y1 + 0.5);
       t.position.set(p.x, p.y - 2);
@@ -370,16 +375,16 @@ export class Office {
     }
   }
 
-  private block(tx: number, ty: number, h: number, top: number, inset = 0): Graphics {
+  private block(tx: number, ty: number, h: number, top: number, inset = 0, alpha = 1): Graphics {
     const g = new Graphics();
     const i = inset;
     const a = toScreen(tx + i, ty + i);
     const b = toScreen(tx + 1 - i, ty + i);
     const c = toScreen(tx + 1 - i, ty + 1 - i);
     const d = toScreen(tx + i, ty + 1 - i);
-    g.poly([d.x, d.y, c.x, c.y, c.x, c.y - h, d.x, d.y - h]).fill(shade(top, 0.62));
-    g.poly([c.x, c.y, b.x, b.y, b.x, b.y - h, c.x, c.y - h]).fill(shade(top, 0.8));
-    g.poly([a.x, a.y - h, b.x, b.y - h, c.x, c.y - h, d.x, d.y - h]).fill(top);
+    g.poly([d.x, d.y, c.x, c.y, c.x, c.y - h, d.x, d.y - h]).fill({ color: shade(top, 0.78), alpha });
+    g.poly([c.x, c.y, b.x, b.y, b.x, b.y - h, c.x, c.y - h]).fill({ color: shade(top, 0.9), alpha });
+    g.poly([a.x, a.y - h, b.x, b.y - h, c.x, c.y - h, d.x, d.y - h]).fill({ color: top, alpha });
     g.zIndex = tx + ty + 1;
     this.objects.addChild(g);
     return g;
@@ -391,8 +396,10 @@ export class Office {
         if (!isWall(x, y)) continue;
         const back = x === 0 || y === 0;
         const front = x === GRID_W - 1 || y === GRID_H - 1;
-        const h = back ? 26 : front ? 4 : 9;
-        this.block(x, y, h, back ? 0x4b4762 : 0x5d5876);
+        // white back walls, a thin stone kerb at the front, glass partitions between rooms
+        if (back) this.block(x, y, 30, 0xf7f7f5);
+        else if (front) this.block(x, y, 4, 0xcfc8bd);
+        else this.block(x, y, 14, 0xbfe3f2, 0.12, 0.35);
       }
   }
 
@@ -407,64 +414,70 @@ export class Office {
     seen.add(k);
     switch (f.kind) {
       case "desk": {
-        const g = this.block(f.x, f.y, 10, 0x9a7650, 0.04);
-        if (first) {
-          const p = toScreen(f.x + 0.5, f.y + 0.5);
-          g.rect(p.x - 6, p.y - 22, 12, 9).fill(0x1c1b26);
-          g.rect(p.x - 5, p.y - 21, 10, 7).fill(0x5eead4);
-          g.rect(p.x - 1, p.y - 13, 2, 3).fill(0x1c1b26);
-        }
+        const g = this.block(f.x, f.y, 10, 0xdcbf94, 0.02);
+        const p = toScreen(f.x + 0.5, f.y + 0.5);
+        // silver laptop: screen, then the base on the table top
+        g.rect(p.x - 6, p.y - 21, 12, 8).fill(0xc9ced3);
+        g.rect(p.x - 5, p.y - 20, 10, 6).fill(first ? 0x1e293b : 0x334155);
+        if (first) g.rect(p.x - 4, p.y - 19, 6, 1.5).fill(0x7dd3fc);
+        g.poly([p.x - 7, p.y - 13, p.x + 7, p.y - 13, p.x + 5, p.y - 11, p.x - 5, p.y - 11]).fill(0xd8dce0);
         break;
       }
       case "table":
-        this.block(f.x, f.y, 9, 0x7c5a3c, 0);
+        this.block(f.x, f.y, 9, 0xdcbf94, 0);
         break;
       case "counter": {
-        const g = this.block(f.x, f.y, 14, 0xc9c3d8, 0.02);
+        const g = this.block(f.x, f.y, 14, 0xfafafa, 0.02);
         if (first) {
           const p = toScreen(f.x + 0.5, f.y + 0.5);
-          g.rect(p.x - 4, p.y - 26, 8, 10).fill(0x2a2735);
-          g.rect(p.x - 2, p.y - 24, 4, 3).fill(0xf97316);
+          g.rect(p.x - 3, p.y - 25, 6, 9).fill(0x9ca3af);
+          g.rect(p.x - 2, p.y - 24, 4, 3).fill(0x38bdf8);
         }
         break;
       }
       case "plant": {
-        const g = this.block(f.x, f.y, 6, 0xa0522d, 0.3);
+        const g = this.block(f.x, f.y, 8, 0xb9b2a6, 0.18);
         const p = toScreen(f.x + 0.5, f.y + 0.5);
-        g.circle(p.x, p.y - 12, 6).fill(0x2f7d4a);
-        g.circle(p.x - 3, p.y - 15, 4).fill(0x3da35d);
-        g.circle(p.x + 3, p.y - 16, 3).fill(0x4cc26f);
+        g.rect(p.x - 1, p.y - 30, 2, 22).fill(0x8a6a4a);
+        g.circle(p.x, p.y - 34, 9).fill(0x3f7d4f);
+        g.circle(p.x - 6, p.y - 30, 6).fill(0x4f9a60);
+        g.circle(p.x + 6, p.y - 31, 6).fill(0x4f9a60);
+        g.circle(p.x + 2, p.y - 39, 5).fill(0x67b577);
         break;
       }
       case "shelf": {
-        const g = this.block(f.x, f.y, 26, 0x6b4a34, 0.1);
+        const g = this.block(f.x, f.y, 26, 0xd8bb8f, 0.1);
         const p = toScreen(f.x + 0.5, f.y + 1 - 0.1);
-        const colors = [0xef4444, 0x3b82f6, 0xeab308, 0x22c55e];
-        for (let i = 0; i < 4; i++) g.rect(p.x - 10 + i * 3, p.y - 22, 2, 7).fill(colors[i] ?? 0xffffff);
+        for (let i = 0; i < 3; i++) {
+          g.rect(p.x - 10 + i * 5, p.y - 23, 4, 5).fill(0xffffff);
+          g.rect(p.x - 10 + i * 5, p.y - 15, 4, 5).fill(0xf3f4f6);
+        }
         break;
       }
       case "easel": {
         const g = new Graphics();
         const p = toScreen(f.x + 0.5, f.y + 0.5);
-        g.moveTo(p.x - 6, p.y).lineTo(p.x, p.y - 26).lineTo(p.x + 6, p.y).stroke({ width: 1.5, color: 0x8b5a2b });
-        g.rect(p.x - 8, p.y - 24, 16, 13).fill(0xfdf6e3).stroke({ width: 1, color: 0x8b5a2b });
-        g.circle(p.x - 2, p.y - 18, 3).fill(0xec4899);
-        g.rect(p.x + 1, p.y - 16, 5, 3).fill(0x3b82f6);
+        g.rect(p.x - 1, p.y - 14, 2, 14).fill(0xb8bec4);
+        g.ellipse(p.x, p.y, 5, 2).fill(0xb8bec4);
+        g.roundRect(p.x - 9, p.y - 27, 18, 13, 2).fill(0x1f2937);
+        g.rect(p.x - 8, p.y - 26, 16, 11).fill(0xe0f2fe);
+        g.circle(p.x - 3, p.y - 21, 3).fill(0xf472b6);
+        g.rect(p.x + 1, p.y - 22, 5, 3).fill(0x38bdf8);
         g.zIndex = f.x + f.y + 1;
         this.objects.addChild(g);
         break;
       }
       case "screen": {
-        const g = this.block(f.x, f.y, 22, 0x1f2937, 0.15);
+        const g = this.block(f.x, f.y, 22, 0x111827, 0.15);
         const p = toScreen(f.x + 0.5, f.y + 0.85);
-        g.rect(p.x - 7, p.y - 22, 9, 12).fill(0x38bdf8);
+        g.rect(p.x - 7, p.y - 22, 9, 12).fill(0x7dd3fc);
         break;
       }
       case "sofa":
-        this.block(f.x, f.y, 7, 0x2f6f73, 0.05);
+        this.block(f.x, f.y, 7, 0xa3acb5, 0.12); // grey cube seat
         break;
       case "brain":
-        this.block(f.x, f.y, 5, 0x2a2838, 0);
+        this.block(f.x, f.y, 5, 0xf5f5f4, 0);
         break;
     }
   }
@@ -476,7 +489,7 @@ export class Office {
     this.objects.addChild(this.brain);
     this.brainLabel = new Text({
       text: "THE BRAIN",
-      style: { fontFamily: PIXEL_FONT, fontSize: 6, fill: 0xc4b5fd, stroke: { color: 0x0b0a10, width: 2 } },
+      style: { fontFamily: PIXEL_FONT, fontSize: 9, fill: 0x334155, stroke: { color: 0xffffff, width: 2 } },
       resolution: 4,
     });
     this.brainLabel.anchor.set(0.5, 0);
@@ -492,11 +505,11 @@ export class Office {
     const r = active ? 11 + pulse * 3 : 10 + pulse;
     const g = this.brain;
     g.clear();
-    g.circle(0, 0, r + 10).fill({ color: active ? 0xa855f7 : 0x6d28d9, alpha: active ? 0.18 + pulse * 0.2 : 0.08 });
-    g.circle(0, 0, r + 5).fill({ color: active ? 0xc084fc : 0x7c3aed, alpha: active ? 0.3 + pulse * 0.25 : 0.14 });
-    g.circle(0, 0, r).fill(active ? 0xe9d5ff : 0x8b5cf6);
+    g.circle(0, 0, r + 10).fill({ color: active ? 0x38bdf8 : 0x60a5fa, alpha: active ? 0.18 + pulse * 0.2 : 0.08 });
+    g.circle(0, 0, r + 5).fill({ color: active ? 0x7dd3fc : 0xcbd5e1, alpha: active ? 0.3 + pulse * 0.25 : 0.14 });
+    g.circle(0, 0, r).fill(active ? 0xe0f2fe : 0x60a5fa);
     g.circle(-r * 0.35, -r * 0.35, r * 0.3).fill({ color: 0xffffff, alpha: 0.7 });
-    g.ellipse(0, 22, 14, 5).fill({ color: active ? 0xc084fc : 0x7c3aed, alpha: 0.25 + pulse * 0.2 });
+    g.ellipse(0, 22, 14, 5).fill({ color: active ? 0x7dd3fc : 0xcbd5e1, alpha: 0.25 + pulse * 0.2 });
     this.brainLabel.text = active ? `THE BRAIN x${this.brainCalls}` : "THE BRAIN";
   }
 
@@ -601,7 +614,7 @@ export class Office {
       if (c) {
         const s = toScreen(c.pos.x, c.pos.y);
         const sx = this.world.x + s.x * this.zoom;
-        const sy = this.world.y + (s.y - 12) * this.zoom;
+        const sy = this.world.y + (s.y - 24) * this.zoom;
         this.zoomAt(sx, sy, 1.8);
       }
     }
@@ -656,7 +669,7 @@ export class Office {
         const s = toScreen(c.pos.x, c.pos.y);
         this.camTarget = {
           x: this.app.screen.width / 2 - s.x * this.zoom,
-          y: this.app.screen.height / 2 - (s.y - 12) * this.zoom,
+          y: this.app.screen.height / 2 - (s.y - 24) * this.zoom,
         };
       }
     }

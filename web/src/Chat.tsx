@@ -1,24 +1,32 @@
 import { useEffect, useMemo, useRef, useState, type KeyboardEvent } from "react";
-import type { AgentView, ChatMessage } from "../../shared/events";
+import type { AgentView, ChatMessage, FileMeta } from "../../shared/events";
 import { loadThread, sendMessage } from "./net";
 import { focusAgent } from "./OfficeCanvas";
 import { store, useHq } from "./store";
-import { StatusBadge, Swatch, timeOf } from "./ui";
+import { Icon, StatusBadge, Swatch, timeOf } from "./ui";
 
 const EMPTY: ChatMessage[] = [];
 
-function Bubble({ m, agents, self }: { m: ChatMessage; agents: AgentView[]; self: AgentView | undefined }) {
+function Bubble({ m, agents, self, files }: { m: ChatMessage; agents: AgentView[]; self: AgentView | undefined; files: FileMeta[] }) {
   const author = agents.find((a) => a.id === m.author);
   const mine = m.author === "owner";
   const system = m.author === "system";
   const fromOther = author && self && author.id !== self.id; // e.g. a report or a brief from the Boss
   if (!m.content && m.state !== "streaming") return null;
+  // a report ends with "Files: a.md (v2), b.csv (v1)": show those as buttons that open the file
+  const fm = /\nFiles: (.+)$/.exec(m.content);
+  const body = fm ? m.content.slice(0, fm.index) : m.content;
+  const chips = fm
+    ? [...(fm[1] ?? "").matchAll(/([^\s,]+) \(v(\d+)\)/g)]
+        .map((x) => files.find((f) => f.name === x[1] && f.version === Number(x[2])))
+        .filter((f): f is FileMeta => !!f)
+    : [];
   return (
     <div data-testid="chat-message" data-author={m.author} className={`flex ${mine ? "justify-end" : "justify-start"}`}>
       <div
-        className={`max-w-[85%] rounded-lg px-3 py-2 text-[13px] leading-relaxed ${
+        className={`max-w-[85%] rounded-lg px-3 py-2 text-sm leading-relaxed ${
           mine
-            ? "bg-violet-600/80 text-white"
+            ? "bg-sky-700/90 text-white"
             : system || m.state === "error"
               ? "bg-red-500/15 text-red-200 ring-1 ring-red-500/30"
               : fromOther
@@ -26,14 +34,30 @@ function Bubble({ m, agents, self }: { m: ChatMessage; agents: AgentView[]; self
                 : "bg-ink-800 text-slate-100"
         }`}
       >
-        <div className="mb-0.5 flex items-center gap-1.5 text-[10px] text-slate-400">
+        <div className="mb-0.5 flex items-center gap-1.5 text-[11px] text-slate-400">
           {author && <Swatch agent={author} size={8} />}
-          <span className="font-pixel text-[7px] uppercase tracking-wide" style={author ? { color: author.color } : undefined}>
+          <span className="text-[11px] font-semibold uppercase tracking-wider" style={author ? { color: author.color } : undefined}>
             {mine ? "You" : system ? "System" : (author?.name ?? m.author)}
           </span>
           <span>{timeOf(m.ts)}</span>
         </div>
-        <div className={`whitespace-pre-wrap break-words ${m.state === "streaming" ? "caret" : ""}`}>{m.content}</div>
+        <div className={`whitespace-pre-wrap break-words ${m.state === "streaming" ? "caret" : ""}`}>{body}</div>
+        {chips.length > 0 && (
+          <div className="mt-1.5 flex flex-wrap gap-1">
+            {chips.map((f) => (
+              <button
+                key={f.id}
+                type="button"
+                data-testid="file-chip"
+                onClick={() => store.openFile(f.id)}
+                className="rounded bg-ink-900/70 px-1.5 py-0.5 font-mono text-[11px] text-sky-300 ring-1 ring-ink-600 hover:ring-sky-400"
+              >
+                <Icon name="file" size={12} className="mr-1 align-[-2px]" />
+                {f.name} v{f.version}
+              </button>
+            ))}
+          </div>
+        )}
       </div>
     </div>
   );
@@ -43,6 +67,7 @@ export function Chat() {
   const agents = useHq((s) => s.agents);
   const selected = useHq((s) => s.selected);
   const messages = useHq((s) => s.threads[selected] ?? EMPTY);
+  const files = useHq((s) => s.files);
   const agent = agents.find((a) => a.id === selected);
   const [text, setText] = useState("");
   const [error, setError] = useState<string | null>(null);
@@ -134,7 +159,7 @@ export function Chat() {
           </p>
         )}
         {messages.map((m) => (
-          <Bubble key={m.id} m={m} agents={agents} self={agent} />
+          <Bubble key={m.id} m={m} agents={agents} self={agent} files={files} />
         ))}
       </div>
       <div className="relative border-t border-ink-700 p-2">
@@ -166,14 +191,14 @@ export function Chat() {
             onChange={(e) => setText(e.target.value)}
             onKeyDown={onKey}
             placeholder={agent?.isBoss ? "Message Cyrex… (@name to delegate)" : `Message ${agent?.name ?? ""}…`}
-            className="min-h-[40px] flex-1 resize-none rounded-md bg-ink-850 px-3 py-2 text-[13px] text-slate-100 placeholder:text-slate-500 ring-1 ring-ink-600 outline-none focus:ring-violet-500"
+            className="min-h-[40px] flex-1 resize-none rounded-md bg-ink-850 px-3 py-2 text-sm text-slate-100 placeholder:text-slate-500 ring-1 ring-ink-600 outline-none focus:ring-sky-500"
           />
           <button
             type="button"
             data-testid="chat-send"
             onClick={() => void submit()}
             disabled={sending || !text.trim()}
-            className="rounded-md bg-violet-600 px-3 py-2 font-pixel text-[8px] text-white disabled:opacity-40"
+            className="rounded-md bg-sky-600 px-3 py-2 text-xs font-semibold uppercase tracking-wider text-white disabled:opacity-40"
           >
             SEND
           </button>

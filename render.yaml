@@ -1,0 +1,23 @@
+# Render blueprint: one Docker web service with a small disk for the SQLite database.
+# Render dashboard -> New -> Blueprint -> pick this repo. You will be asked for the two secrets.
+services:
+  - type: web
+    name: rootsapiens-hq
+    runtime: docker
+    plan: starter # a persistent disk needs a paid plan; on "free" the database resets on every restart
+    healthCheckPath: /api/health
+    disk:
+      name: hq-data
+      mountPath: /data
+      sizeGB: 1
+    envVars:
+      - key: HQ_OWNER_TOKEN # your owner password, 16+ characters
+        sync: false
+      - key: ANTHROPIC_API_KEY # leave empty to run the public demo in MOCK mode
+        sync: false
+      - key: MOCK
+        value: "0"
+      - key: MODEL
+        value: claude-sonnet-5-5
+      - key: HQ_PUBLIC_DETAIL # office = visitors see the office only; full = visitors also read chats and files
+        value: office

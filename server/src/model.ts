@@ -41,7 +41,7 @@ export class AnthropicModel implements ModelClient {
   constructor(
     apiKey: string,
     readonly model: string,
-    private readonly maxTokens = 1024,
+    private readonly maxTokens = 8192, // room for a full file in one save_file call
   ) {
     // Retries are done by the HQ runner (with backoff and visible status), not by the SDK.
     this.client = new Anthropic({ apiKey, maxRetries: 0, timeout: 120_000 });

@@ -47,7 +47,7 @@ export const ChatMessageSchema = z.object({
 });
 export type ChatMessage = z.infer<typeof ChatMessageSchema>;
 
-export const ActivityKindSchema = z.enum(["status", "message", "delegation", "report", "error", "system"]);
+export const ActivityKindSchema = z.enum(["status", "message", "delegation", "report", "file", "error", "system"]);
 export const ActivityEntrySchema = z.object({
   id: z.number().int(),
   ts: z.number().int(),
@@ -56,6 +56,24 @@ export const ActivityEntrySchema = z.object({
   text: z.string(),
 });
 export type ActivityEntry = z.infer<typeof ActivityEntrySchema>;
+
+/** A deliverable an agent saved with save_file. Content is fetched separately. */
+export const FileMetaSchema = z.object({
+  id: z.string().min(1),
+  agentId: z.string().min(1),
+  name: z.string().min(1),
+  title: z.string(),
+  size: z.number().int().nonnegative(),
+  version: z.number().int().positive(),
+  ts: z.number().int(),
+});
+export type FileMeta = z.infer<typeof FileMetaSchema>;
+export const FileSchema = FileMetaSchema.extend({ content: z.string() });
+export type HqFile = z.infer<typeof FileSchema>;
+
+/** Allowed deliverable names: plain file name, text extensions only. */
+export const FILE_NAME_RE = /^[A-Za-z0-9][\w.-]{0,79}\.(md|txt|csv|json|html|css|js|ts|tsx|rs|py|svg|yaml|yml|srt)$/;
+export const MAX_FILE_BYTES = 200 * 1024;
 
 export const ModeSchema = z.enum(["mock", "live"]);
 export type Mode = z.infer<typeof ModeSchema>;
@@ -71,6 +89,7 @@ export const ServerEventSchema = z.discriminatedUnion("type", [
     brainCalls: z.number().int().nonnegative(),
     tasksDone: z.number().int().nonnegative(),
     activity: z.array(ActivityEntrySchema),
+    files: z.array(FileMetaSchema),
   }),
   z.object({ type: z.literal("agent"), agent: AgentViewSchema }),
   z.object({ type: z.literal("chat.message"), message: ChatMessageSchema }),
@@ -80,6 +99,7 @@ export const ServerEventSchema = z.discriminatedUnion("type", [
   z.object({ type: z.literal("activity"), entry: ActivityEntrySchema }),
   z.object({ type: z.literal("brain"), calls: z.number().int().nonnegative() }),
   z.object({ type: z.literal("paused"), paused: z.boolean() }),
+  z.object({ type: z.literal("file"), file: FileMetaSchema }),
   z.object({ type: z.literal("counters"), tasksDone: z.number().int().nonnegative() }),
 ]);
 export type ServerEvent = z.infer<typeof ServerEventSchema>;

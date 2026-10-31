@@ -7,6 +7,9 @@ export const AssignTaskInput = z.object({ agent: z.string().min(1), task: z.stri
 export const ReportResultInput = z.object({ summary: z.string().min(1), needs_input: z.boolean().optional() });
 export const UpdateStatusInput = z.object({ status: z.enum(["WORKING", "THINKING"]), note: z.string().optional() });
 
+export const SaveFileInput = z.object({ name: z.string().min(1), content: z.string(), title: z.string().optional() });
+export const ReadFileInput = z.object({ name: z.string().min(1) });
+
 export function toolsFor(agent: AgentConfig): ToolDef[] {
   const workers = AGENTS.filter((a) => !a.isBoss).map((a) => a.id);
   const tools: ToolDef[] = [
@@ -23,12 +26,36 @@ export function toolsFor(agent: AgentConfig): ToolDef[] {
       },
     },
     {
+      name: "save_file",
+      description:
+        "Save a deliverable (draft, script, plan, code, checklist, report) as a file the owner and the team can open. Saving an existing name adds a new version. Put the work in the file and keep chat to a summary.",
+      input_schema: {
+        type: "object",
+        properties: {
+          name: { type: "string", description: "Plain file name with a text extension, e.g. trailer-script.md, pricing.csv, save_test.ts." },
+          content: { type: "string", description: "Full file content (max 200 KB)." },
+          title: { type: "string", description: "Short human title." },
+        },
+        required: ["name", "content"],
+      },
+    },
+    {
+      name: "read_file",
+      description: "Read the newest version of a team file by name (to review, continue or build on it).",
+      input_schema: { type: "object", properties: { name: { type: "string" } }, required: ["name"] },
+    },
+    {
+      name: "list_files",
+      description: "List the team's files: name, version, author, size.",
+      input_schema: { type: "object", properties: {} },
+    },
+    {
       name: "report_result",
       description: "Report the result of the current task. Call exactly once when finished. Set needs_input when blocked on the owner.",
       input_schema: {
         type: "object",
         properties: {
-          summary: { type: "string", description: "One or two sentences: what was done and the proof." },
+          summary: { type: "string", description: "One or two sentences: what was done and the proof (name the files you saved)." },
           needs_input: { type: "boolean" },
         },
         required: ["summary"],

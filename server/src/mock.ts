@@ -11,11 +11,11 @@ export interface MockOptions {
 }
 
 const KEYWORDS: ReadonlyArray<[RegExp, string]> = [
-  [/\b(code|build|bug|test|qa|deploy|server|fix)\b/i, "rajaie"],
-  [/\b(art|logo|draw|image|sound|video|music|design)\b/i, "aktham"],
-  [/\b(script|story|business|pitch|price|proposal|write)\b/i, "zurub"],
-  [/\b(hire|agent file|training|audit|watch|hr)\b/i, "razan"],
-  [/\b(animate|animation|walk cycle|7rrek)\b/i, "nedal"],
+  [/\b(qa|quality|review|check|approve|brand safety|onboard\w*|team|client success)\b/i, "razan"],
+  [/\b(reel|reels|script|caption|captions|copy|hook|hooks|story|stories)\b/i, "nedal"],
+  [/\b(design|visual|image|carousel|thumbnail|brand kit|logo|cover)\b/i, "aktham"],
+  [/\b(edit|video|voice|schedul\w*|analytics|report|code|build|fix|deploy|platform|automat\w*)\b/i, "rajaie"],
+  [/\b(research|trend|trends|competitor|audience|brief|strategy|calendar|plan)\b/i, "zurub"],
 ];
 
 class MockApiError extends Error {
@@ -128,6 +128,18 @@ export class MockModel implements ModelClient {
       text = ask
         ? `[MOCK] I need one decision from the owner before I can finish "${short}".`
         : `[MOCK] Done with "${short}". Proof: fake run, exit code 0 (mock mode, nothing was executed).`;
+      if (!ask) {
+        const slug = task.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "").slice(0, 40) || "task";
+        calls.push({
+          id: id(),
+          name: "save_file",
+          input: {
+            name: `${input.agent.id}-${slug}.md`,
+            title: short,
+            content: `# ${short}\n\nAuthor: ${input.agent.name} (${input.agent.title})\n\n> MOCK deliverable: placeholder text, no model was called and nothing was executed.\n\n## Request\n\n${task}\n\n## Plan\n\n1. Scope the request.\n2. Draft the work.\n3. Check it and hand it over.\n`,
+          },
+        });
+      }
       calls.push({
         id: id(),
         name: "report_result",
