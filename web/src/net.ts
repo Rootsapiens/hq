@@ -1,5 +1,5 @@
 // WebSocket stream (with reconnect) + REST calls.
-import { parseServerEvent, type ChatMessage, type PostMessageResponse } from "../../shared/events";
+import { FileSchema, parseServerEvent, type ChatMessage, type HqFile, type PostMessageResponse } from "../../shared/events";
 import { store } from "./store";
 
 /**
@@ -68,6 +68,19 @@ export async function sendMessage(id: string, text: string): Promise<PostMessage
     return { ok: false, error: "server unreachable" };
   }
 }
+
+export async function loadFile(id: string): Promise<HqFile | null> {
+  try {
+    const res = await fetch(`/api/files/${encodeURIComponent(id)}`);
+    if (!res.ok) return null;
+    const parsed = FileSchema.safeParse(await res.json());
+    return parsed.success ? parsed.data : null;
+  } catch {
+    return null;
+  }
+}
+
+export const fileDownloadUrl = (id: string) => `/api/files/${encodeURIComponent(id)}/download`;
 
 export async function setPaused(paused: boolean): Promise<void> {
   try {

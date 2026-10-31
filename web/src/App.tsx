@@ -1,5 +1,6 @@
 import { useEffect, useMemo } from "react";
 import { Chat } from "./Chat";
+import { Files } from "./Files";
 import { connect, loadThread, setPaused } from "./net";
 import { OfficeCanvas, focusAgent } from "./OfficeCanvas";
 import { store, useHq, type Tab } from "./store";
@@ -123,6 +124,7 @@ const KIND_ICON: Record<string, string> = {
   message: "✉",
   delegation: "→",
   report: "✓",
+  file: "▤",
   error: "!",
   system: "◆",
 };
@@ -153,6 +155,7 @@ function Activity() {
 const TABS: { id: Tab; label: string }[] = [
   { id: "roster", label: "Roster" },
   { id: "chat", label: "Chat" },
+  { id: "files", label: "Files" },
   { id: "activity", label: "Activity" },
 ];
 
@@ -178,6 +181,7 @@ function Panel({ className = "" }: { className?: string }) {
       <div className="min-h-0 flex-1">
         {tab === "roster" && <Roster />}
         {tab === "chat" && <Chat />}
+        {tab === "files" && <Files />}
         {tab === "activity" && <Activity />}
       </div>
     </aside>

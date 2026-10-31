@@ -242,7 +242,7 @@ describe("tools and persistence", () => {
     expect(seen.length).toBe(0);
     await post(h.base, "/api/agents/rajaie/message", { text: "delegate this" });
     await waitFor(() => statuses(h.events, "rajaie").includes("DONE"));
-    expect(seen[0]?.tools.map((t) => t.name)).toEqual(["update_status", "report_result"]);
+    expect(seen[0]?.tools.map((t) => t.name)).toEqual(["update_status", "save_file", "read_file", "list_files", "report_result"]);
     const lastMsg = seen[1]?.messages.at(-1);
     expect(JSON.stringify(lastMsg)).toContain("Only the Boss can assign tasks");
     expect(statuses(h.events, "aktham")).toEqual([]);
@@ -262,5 +262,75 @@ describe("tools and persistence", () => {
     expect(thread.filter((m) => m.author === "razan").length).toBeGreaterThanOrEqual(2);
     const snap = h.events[0];
     expect(snap?.type === "snapshot" && snap.tasksDone).toBe(1);
+  });
+
+  it("save_file stores versioned deliverables; read_file/list_files see them; the report to the Boss names them", async () => {
+    const seen: TurnInput[] = [];
+    let step = 0;
+    const call = (id: string, name: string, input: unknown): TurnResult => ({
+      text: "",
+      toolCalls: [{ id, name, input }],
+      assistantContent: [{ type: "tool_use", id, name, input }],
+    });
+    const model: ModelClient = {
+      mode: "mock",
+      model: "probe",
+      async turn(input: TurnInput): Promise<TurnResult> {
+        seen.push(structuredClone(input));
+        if (input.agent.isBoss) {
+          if (input.messages.at(-1)?.role === "user" && typeof input.messages.at(-1)?.content === "string" && step === 0) {
+            step = 1;
+            return call("b1", "assign_task", { agent: "zurub", task: "write the pitch" });
+          }
+          return call(`b${seen.length}`, "report_result", { summary: "delegated" });
+        }
+        const n = seen.filter((s) => !s.agent.isBoss).length;
+        if (n === 1) return call("z1", "save_file", { name: "pitch.md", content: "# Pitch v1", title: "Pitch" });
+        if (n === 2) return call("z2", "save_file", { name: "pitch.md", content: "# Pitch v2" });
+        if (n === 3) return call("z3", "save_file", { name: "../etc/passwd", content: "x" });
+        if (n === 4) return call("z4", "read_file", { name: "pitch.md" });
+        if (n === 5) return call("z5", "list_files", {});
+        return call("z6", "report_result", { summary: "pitch drafted" });
+      },
+    };
+    h = await boot(model);
+    await post(h.base, "/api/agents/cyrex/message", { text: "get a pitch written" });
+    await waitFor(() => statuses(h.events, "zurub").includes("DONE"));
+    await h.app.hq.idle();
+
+    const toolResult = (i: number) => JSON.stringify(seen.filter((s) => !s.agent.isBoss)[i]?.messages.at(-1));
+    expect(toolResult(1)).toContain("Saved pitch.md v1");
+    expect(toolResult(2)).toContain("Saved pitch.md v2");
+    expect(toolResult(3)).toContain("Bad file name");
+    expect(toolResult(4)).toContain("# Pitch v2");
+    expect(toolResult(5)).toContain("pitch.md v2 by Zurub");
+
+    const fileEvents = h.events.filter((e) => e.type === "file");
+    expect(fileEvents.map((e) => (e.type === "file" ? e.file.version : 0))).toEqual([1, 2]);
+    const list = (await (await fetch(`${h.base}/api/files`)).json()) as { id: string; name: string; version: number; agentId: string }[];
+    expect(list.map((f) => [f.name, f.version, f.agentId])).toEqual([["pitch.md", 2, "zurub"], ["pitch.md", 1, "zurub"]]);
+    const v1 = (await (await fetch(`${h.base}/api/files/${list[1]?.id}`)).json()) as { content: string; title: string };
+    expect(v1).toMatchObject({ content: "# Pitch v1", title: "Pitch" });
+    const dl = await fetch(`${h.base}/api/files/${list[0]?.id}/download`);
+    expect(dl.headers.get("content-type")).toContain("text/plain");
+    expect(dl.headers.get("content-disposition")).toBe('attachment; filename="pitch.md"');
+    expect(await dl.text()).toBe("# Pitch v2");
+    expect((await fetch(`${h.base}/api/files/nope`)).status).toBe(404);
+
+    const boss = (await (await fetch(`${h.base}/api/agents/cyrex/messages`)).json()) as ChatMessage[];
+    expect(boss.find((m) => m.author === "zurub")?.content).toBe("Report: pitch drafted\nFiles: pitch.md (v1), pitch.md (v2)");
+    expect(h.events.some((e) => e.type === "activity" && e.entry.kind === "file")).toBe(true);
+    expect(h.rawProblems).toEqual([]);
+  });
+
+  it("MOCK workers deliver a file with their report", async () => {
+    h = await boot();
+    await post(h.base, "/api/agents/cyrex/message", { text: "@zurub draft the trailer script" });
+    await waitFor(() => statuses(h.events, "zurub").includes("DONE"));
+    await h.app.hq.idle();
+    const list = (await (await fetch(`${h.base}/api/files`)).json()) as { name: string; agentId: string }[];
+    expect(list).toEqual([expect.objectContaining({ name: "zurub-draft-the-trailer-script.md", agentId: "zurub" })]);
+    const snap = (await (await fetch(`${h.base}/api/state`)).json()) as { files: unknown[] };
+    expect(snap.files).toHaveLength(1);
   });
 });

@@ -2,11 +2,11 @@
 // Every failure ends in the ERROR status for that agent; nothing here is allowed to throw out.
 import { randomUUID } from "node:crypto";
 import { AGENTS, BOSS_ID, type AgentConfig } from "../agents.config";
-import type { ActivityEntry, AgentStatus, AgentView, ChatMessage, ServerEvent } from "../../shared/events";
+import { FILE_NAME_RE, MAX_FILE_BYTES, type ActivityEntry, type AgentStatus, type AgentView, type ChatMessage, type FileMeta, type HqFile, type ServerEvent } from "../../shared/events";
 import type { HqDb } from "./db";
 import { errorMessage, isRetryable, type MessageParam, type ModelClient, type ToolCall, type TurnResult } from "./model";
 import { AgentStateMachine, DONE_HOLD_MS } from "./state";
-import { AssignTaskInput, ReportResultInput, UpdateStatusInput, toolsFor } from "./tools";
+import { AssignTaskInput, ReadFileInput, ReportResultInput, SaveFileInput, UpdateStatusInput, toolsFor } from "./tools";
 
 export interface HqOptions {
   db: HqDb;
@@ -63,7 +63,7 @@ export class Hq {
     this.meetingMs = opts.meetingMs ?? 8000;
     this.retries = opts.retries ?? 3;
     this.retryBaseMs = opts.retryBaseMs ?? 800;
-    this.maxToolRounds = opts.maxToolRounds ?? 6;
+    this.maxToolRounds = opts.maxToolRounds ?? 10;
     this.historyLimit = opts.historyLimit ?? 30;
     for (const config of AGENTS) {
       const rt: Runtime = {
@@ -97,6 +97,7 @@ export class Hq {
       brainCalls: this.brainCalls,
       tasksDone: this.db.counter("tasksDone"),
       activity: this.db.activity(100),
+      files: this.db.files(200),
     };
   }
 
@@ -121,6 +122,14 @@ export class Hq {
     rt.needsInput = false;
     this.enqueue(rt, { id: msg.id, kind: "owner", from: "owner", text });
     return { messageId: msg.id, queued: rt.queue.length };
+  }
+
+  files(): FileMeta[] {
+    return this.db.files(500);
+  }
+
+  file(id: string): HqFile | null {
+    return this.db.file(id);
   }
 
   setPaused(paused: boolean): void {
@@ -305,6 +314,7 @@ export class Hq {
     const name = rt.config.name;
     let report: string | null = null;
     let lastText = "";
+    const saved: FileMeta[] = [];
     try {
       this.setStatus(rt, "THINKING", clip(job.text.replace(/^\[from [^\]]+\]\s*/i, ""), 60));
       const messages = this.history(rt, job);
@@ -320,14 +330,14 @@ export class Hq {
         const others = result.toolCalls.filter((c) => c.name !== "assign_task");
         const outcomes = new Map<string, ToolOutcome>();
         if (assigns.length) {
-          const done = await Promise.all(assigns.map((c) => this.runTool(rt, c)));
+          const done = await Promise.all(assigns.map((c) => this.runTool(rt, c, saved)));
           assigns.forEach((c, i) => {
             const o = done[i];
             if (o) outcomes.set(c.id, o);
           });
           if (rt.config.isBoss) this.setStatus(rt, "WORKING");
         }
-        for (const c of others) outcomes.set(c.id, await this.runTool(rt, c));
+        for (const c of others) outcomes.set(c.id, await this.runTool(rt, c, saved));
         for (const call of result.toolCalls) {
           const o = outcomes.get(call.id);
           if (!o) continue;
@@ -342,7 +352,9 @@ export class Hq {
       this.setStatus(rt, "DONE");
       const tasksDone = this.db.increment("tasksDone");
       this.emit({ type: "counters", tasksDone });
-      const summary = report ?? clip(lastText || "finished", 200);
+      const names = [...new Set(saved.map((f) => `${f.name} (v${f.version})`))];
+      const filesNote = names.length ? `\nFiles: ${names.join(", ")}` : "";
+      const summary = (report ?? clip(lastText || "finished", 200)) + filesNote;
       this.activity(rt.config.id, "report", `${name} done: ${clip(summary, 120)}`);
       if (job.kind === "task" && job.from !== rt.config.id && this.rts.has(job.from)) {
         this.saveMessage({ thread: job.from, author: rt.config.id, content: `Report: ${summary}`, state: "done" });
@@ -357,7 +369,7 @@ export class Hq {
     }
   }
 
-  private async runTool(rt: Runtime, call: ToolCall): Promise<ToolOutcome> {
+  private async runTool(rt: Runtime, call: ToolCall, saved: FileMeta[]): Promise<ToolOutcome> {
     try {
       switch (call.name) {
         case "assign_task": {
@@ -372,6 +384,40 @@ export class Hq {
           const input = UpdateStatusInput.parse(call.input);
           this.setStatus(rt, input.status, input.note ? clip(input.note, 60) : undefined);
           return { content: "ok", isError: false };
+        }
+        case "save_file": {
+          const input = SaveFileInput.parse(call.input);
+          const name = input.name.trim();
+          if (!FILE_NAME_RE.test(name))
+            return { content: `Bad file name "${clip(name, 60)}": use letters, digits, - _ . and a text extension (.md .txt .csv .json .html .css .js .ts .tsx .rs .py .svg .yaml .srt).`, isError: true };
+          if (Buffer.byteLength(input.content, "utf8") > MAX_FILE_BYTES) return { content: "File too large (max 200 KB). Split it.", isError: true };
+          if (!input.content.trim()) return { content: "File is empty.", isError: true };
+          const meta = this.db.saveFile({
+            id: randomUUID(),
+            agentId: rt.config.id,
+            name,
+            title: clip((input.title ?? "").trim() || name, 80),
+            content: input.content,
+            ts: Date.now(),
+          });
+          saved.push(meta);
+          this.emit({ type: "file", file: meta });
+          this.activity(rt.config.id, "file", `${rt.config.name} saved ${meta.name} v${meta.version} (${meta.size} B)`);
+          return { content: `Saved ${meta.name} v${meta.version} (${meta.size} bytes).`, isError: false };
+        }
+        case "read_file": {
+          const input = ReadFileInput.parse(call.input);
+          const f = this.db.latestFile(input.name.trim());
+          if (!f) return { content: `No file named "${clip(input.name, 60)}". Call list_files.`, isError: true };
+          const author = this.rts.get(f.agentId)?.config.name ?? f.agentId;
+          return { content: `${f.name} v${f.version} by ${author}:\n\n${f.content}`, isError: false };
+        }
+        case "list_files": {
+          const latest = new Map<string, FileMeta>();
+          for (const f of this.db.files(500)) if (!latest.has(f.name)) latest.set(f.name, f);
+          if (!latest.size) return { content: "No files yet.", isError: false };
+          const lines = [...latest.values()].map((f) => `${f.name} v${f.version} by ${this.rts.get(f.agentId)?.config.name ?? f.agentId}, ${f.size} B: ${f.title}`);
+          return { content: lines.join("\n"), isError: false };
         }
         case "report_result": {
           const input = ReportResultInput.parse(call.input);

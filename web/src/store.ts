@@ -1,8 +1,8 @@
 // Client-side mirror of server state. Only server events mutate it (plus UI selection).
 import { useSyncExternalStore } from "react";
-import type { ActivityEntry, AgentView, ChatMessage, Mode, ServerEvent } from "../../shared/events";
+import type { ActivityEntry, AgentView, ChatMessage, FileMeta, Mode, ServerEvent } from "../../shared/events";
 
-export type Tab = "roster" | "chat" | "activity";
+export type Tab = "roster" | "chat" | "files" | "activity";
 
 export interface HqState {
   connected: boolean;
@@ -14,6 +14,10 @@ export interface HqState {
   tasksDone: number;
   activity: ActivityEntry[];
   threads: Record<string, ChatMessage[]>;
+  /** Newest first. */
+  files: FileMeta[];
+  /** File open in the viewer. */
+  openFile: string | null;
   selected: string;
   tab: Tab;
 }
@@ -28,6 +32,8 @@ let state: HqState = {
   tasksDone: 0,
   activity: [],
   threads: {},
+  files: [],
+  openFile: null,
   selected: "cyrex",
   tab: "chat",
 };
@@ -47,6 +53,7 @@ export const store = {
   setConnected: (connected: boolean) => set({ connected }),
   select: (selected: string, tab?: Tab) => set({ selected, ...(tab ? { tab } : {}) }),
   setTab: (tab: Tab) => set({ tab }),
+  openFile: (openFile: string | null) => set({ openFile, ...(openFile ? { tab: "files" as Tab } : {}) }),
   setThread(thread: string, messages: ChatMessage[]): void {
     // merge: keep any live messages newer than the fetched page
     const live = state.threads[thread] ?? [];
@@ -70,6 +77,7 @@ export const store = {
           brainCalls: e.brainCalls,
           tasksDone: e.tasksDone,
           activity: e.activity,
+          files: e.files,
         });
         return;
       case "agent": {
@@ -89,6 +97,9 @@ export const store = {
         return;
       case "activity":
         set({ activity: [...state.activity.slice(-199), e.entry] });
+        return;
+      case "file":
+        set({ files: [e.file, ...state.files.filter((f) => f.id !== e.file.id)] });
         return;
       case "brain":
         set({ brainCalls: e.calls });

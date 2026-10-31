@@ -23,7 +23,10 @@ shown as a `MOCK` badge in the top bar. Never commit `.env`.
   check for 5 s; ERROR shows a red "!". A* pathfinding on the tile grid, 4-frame walk in 4 iso
   directions, depth sorting by y. The Brain pulses while model calls are in flight.
 - **Camera**: drag to pan, wheel or pinch to zoom, click an agent to focus and open its chat, FIT to see everything.
-- **Panel**: Roster | Chat (streamed, saved in SQLite, `@name` autocomplete in the Boss chat) | Activity.
+- **Panel**: Roster | Chat (streamed, saved in SQLite, `@name` autocomplete in the Boss chat) | Files | Activity.
+- **Files**: agents put every deliverable (draft, script, plan, code, QA report) in a file with `save_file`.
+  Reports to the Boss end with the file names, shown as buttons that open the file. The Files tab lists every
+  version (newest first, filter by agent) with a read-only viewer and a Download button.
 - **Top bar**: working / done / needs-input counters, connection dot, mode badge, global PAUSE (no new jobs start while paused).
 
 ## The team (`server/agents.config.ts`)
@@ -41,10 +44,10 @@ System prompts are short summaries of the agent files; the agent files themselve
 
 ## Server
 
-- `POST /api/agents/:id/message` `{ "text": "..." }` queues a message (202). `GET /api/agents/:id/messages`, `GET /api/state`, `POST /api/pause` `{ "paused": true }`, `GET /api/health`.
+- `POST /api/agents/:id/message` `{ "text": "..." }` queues a message (202). `GET /api/agents/:id/messages`, `GET /api/state`, `GET /api/files`, `GET /api/files/:id`, `GET /api/files/:id/download`, `POST /api/pause` `{ "paused": true }`, `GET /api/health`.
 - Local only: binds 127.0.0.1 and refuses requests and WS connections from non-localhost Origins.
 - WebSocket `/ws`: a `snapshot` first, then events. The contract lives in `shared/events.ts` (zod schemas, no `any`).
-- Tools: `assign_task` (Boss only), `report_result`, `update_status`. One queue per agent; model calls retry with
+- Tools: `assign_task` (Boss only), `save_file`, `read_file`, `list_files`, `report_result`, `update_status`. One queue per agent; model calls retry with
   exponential backoff (3 retries); a final failure turns the agent ERROR and never crashes the server.
 - Storage: SQLite (`better-sqlite3`) at `server/data/hq.sqlite` (git-ignored). Override with `HQ_DB`.
 - Env: `ANTHROPIC_API_KEY`, `MODEL` (default `claude-sonnet-5-5`), `MOCK`, `HQ_PORT` (8787), `MEETING_MS` (8000).

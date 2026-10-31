@@ -128,6 +128,18 @@ export class MockModel implements ModelClient {
       text = ask
         ? `[MOCK] I need one decision from the owner before I can finish "${short}".`
         : `[MOCK] Done with "${short}". Proof: fake run, exit code 0 (mock mode, nothing was executed).`;
+      if (!ask) {
+        const slug = task.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "").slice(0, 40) || "task";
+        calls.push({
+          id: id(),
+          name: "save_file",
+          input: {
+            name: `${input.agent.id}-${slug}.md`,
+            title: short,
+            content: `# ${short}\n\nAuthor: ${input.agent.name} (${input.agent.title})\n\n> MOCK deliverable: placeholder text, no model was called and nothing was executed.\n\n## Request\n\n${task}\n\n## Plan\n\n1. Scope the request.\n2. Draft the work.\n3. Check it and hand it over.\n`,
+          },
+        });
+      }
       calls.push({
         id: id(),
         name: "report_result",

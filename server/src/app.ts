@@ -96,6 +96,24 @@ export async function startApp(opts: AppOptions): Promise<App> {
     if (req.method === "GET" && path === "/api/state") return send(res, 200, hq.snapshot());
     if (req.method === "GET" && path === "/api/agents") return send(res, 200, hq.agentViews());
 
+    if (req.method === "GET" && path === "/api/files") return send(res, 200, hq.files());
+    const fileMatch = /^\/api\/files\/([\w-]+)(\/download)?$/.exec(path);
+    if (req.method === "GET" && fileMatch) {
+      const f = hq.file(fileMatch[1] ?? "");
+      if (!f) return send(res, 404, { ok: false, error: "unknown file" });
+      if (!fileMatch[2]) return send(res, 200, f);
+      // served as plain text, never rendered, so an agent-written .html/.svg cannot run in the HQ origin
+      res.writeHead(200, {
+        "content-type": "text/plain; charset=utf-8",
+        "content-disposition": `attachment; filename="${f.name}"`,
+        "x-content-type-options": "nosniff",
+        "content-security-policy": "default-src 'none'; sandbox",
+        "cache-control": "no-store",
+      });
+      res.end(f.content);
+      return;
+    }
+
     const msgMatch = /^\/api\/agents\/([\w-]+)\/(messages|message)$/.exec(path);
     if (msgMatch) {
       const id = msgMatch[1] ?? "";

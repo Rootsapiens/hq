@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useRef, useState, type KeyboardEvent } from "react";
-import type { AgentView, ChatMessage } from "../../shared/events";
+import type { AgentView, ChatMessage, FileMeta } from "../../shared/events";
 import { loadThread, sendMessage } from "./net";
 import { focusAgent } from "./OfficeCanvas";
 import { store, useHq } from "./store";
@@ -7,12 +7,20 @@ import { StatusBadge, Swatch, timeOf } from "./ui";
 
 const EMPTY: ChatMessage[] = [];
 
-function Bubble({ m, agents, self }: { m: ChatMessage; agents: AgentView[]; self: AgentView | undefined }) {
+function Bubble({ m, agents, self, files }: { m: ChatMessage; agents: AgentView[]; self: AgentView | undefined; files: FileMeta[] }) {
   const author = agents.find((a) => a.id === m.author);
   const mine = m.author === "owner";
   const system = m.author === "system";
   const fromOther = author && self && author.id !== self.id; // e.g. a report or a brief from the Boss
   if (!m.content && m.state !== "streaming") return null;
+  // a report ends with "Files: a.md (v2), b.csv (v1)": show those as buttons that open the file
+  const fm = /\nFiles: (.+)$/.exec(m.content);
+  const body = fm ? m.content.slice(0, fm.index) : m.content;
+  const chips = fm
+    ? [...(fm[1] ?? "").matchAll(/([^\s,]+) \(v(\d+)\)/g)]
+        .map((x) => files.find((f) => f.name === x[1] && f.version === Number(x[2])))
+        .filter((f): f is FileMeta => !!f)
+    : [];
   return (
     <div data-testid="chat-message" data-author={m.author} className={`flex ${mine ? "justify-end" : "justify-start"}`}>
       <div
@@ -33,7 +41,22 @@ function Bubble({ m, agents, self }: { m: ChatMessage; agents: AgentView[]; self
           </span>
           <span>{timeOf(m.ts)}</span>
         </div>
-        <div className={`whitespace-pre-wrap break-words ${m.state === "streaming" ? "caret" : ""}`}>{m.content}</div>
+        <div className={`whitespace-pre-wrap break-words ${m.state === "streaming" ? "caret" : ""}`}>{body}</div>
+        {chips.length > 0 && (
+          <div className="mt-1.5 flex flex-wrap gap-1">
+            {chips.map((f) => (
+              <button
+                key={f.id}
+                type="button"
+                data-testid="file-chip"
+                onClick={() => store.openFile(f.id)}
+                className="rounded bg-ink-900/70 px-1.5 py-0.5 font-mono text-[11px] text-sky-300 ring-1 ring-ink-600 hover:ring-sky-400"
+              >
+                ▤ {f.name} v{f.version}
+              </button>
+            ))}
+          </div>
+        )}
       </div>
     </div>
   );
@@ -43,6 +66,7 @@ export function Chat() {
   const agents = useHq((s) => s.agents);
   const selected = useHq((s) => s.selected);
   const messages = useHq((s) => s.threads[selected] ?? EMPTY);
+  const files = useHq((s) => s.files);
   const agent = agents.find((a) => a.id === selected);
   const [text, setText] = useState("");
   const [error, setError] = useState<string | null>(null);
@@ -134,7 +158,7 @@ export function Chat() {
           </p>
         )}
         {messages.map((m) => (
-          <Bubble key={m.id} m={m} agents={agents} self={agent} />
+          <Bubble key={m.id} m={m} agents={agents} self={agent} files={files} />
         ))}
       </div>
       <div className="relative border-t border-ink-700 p-2">
