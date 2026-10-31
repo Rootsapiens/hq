@@ -1,6 +1,6 @@
 # Sprite overrides
 
-Drop `<agentId>.png` here (for example `rajaie.png`) to replace the generated character.
+Drop `<agentId>.png` here (for example `sektor.png`) to replace the generated character.
 
 - Size: 64 x 72 px, frames of 16 x 24 px, transparent background, feet on the bottom row.
 - Row 0: walk cycle facing the camera, left-down (SW), 4 frames.

@@ -78,7 +78,7 @@ export class HqDb {
 
   messages(thread: string, limit = 200): ChatMessage[] {
     const rows = this.db
-      .prepare("SELECT * FROM (SELECT * FROM messages WHERE thread = ? ORDER BY ts DESC, rowid DESC LIMIT ?) ORDER BY ts ASC")
+      .prepare("SELECT id, thread, author, content, ts, state FROM (SELECT *, rowid AS rid FROM messages WHERE thread = ? ORDER BY ts DESC, rowid DESC LIMIT ?) ORDER BY ts ASC, rid ASC")
       .all(thread, limit) as MessageRow[];
     return rows.map((r) => ({ ...r, state: toState(r.state) }));
   }

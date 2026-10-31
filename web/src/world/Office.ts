@@ -300,7 +300,7 @@ export class Office {
   async init(host: HTMLElement): Promise<void> {
     await this.app.init({
       resizeTo: host,
-      background: 0x0d0c14,
+      background: 0x0a0f14,
       antialias: false,
       autoDensity: true,
       resolution: Math.min(window.devicePixelRatio || 1, 2),

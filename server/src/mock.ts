@@ -11,11 +11,11 @@ export interface MockOptions {
 }
 
 const KEYWORDS: ReadonlyArray<[RegExp, string]> = [
-  [/\b(code|build|bug|test|qa|deploy|server|fix)\b/i, "rajaie"],
-  [/\b(art|logo|draw|image|sound|video|music|design)\b/i, "aktham"],
-  [/\b(script|story|business|pitch|price|proposal|write)\b/i, "zurub"],
-  [/\b(hire|agent file|training|audit|watch|hr)\b/i, "razan"],
-  [/\b(animate|animation|walk cycle|7rrek)\b/i, "nedal"],
+  [/\b(code|build|bug|test|qa|deploy|server|fix|program|platform|live|web|api|automat\w*|integrat\w*)\b/i, "sektor"],
+  [/\b(design|ux|ui|brand|logo|wireframe|image|visual)\b/i, "sindel"],
+  [/\b(research|market|competitor|strategy|proposal|pricing|price|assessment|pitch)\b/i, "nightwolf"],
+  [/\b(team|hire|hiring|onboard\w*|people|training|role|audit|hr)\b/i, "sonya"],
+  [/\b(video|demo|explainer|content|social|media|animate|animation)\b/i, "liukang"],
 ];
 
 class MockApiError extends Error {
@@ -101,7 +101,7 @@ export class MockModel implements ModelClient {
         let targets = extractMentions(userText).filter((m) => AGENTS.some((a) => a.id === m && !a.isBoss));
         if (targets.length === 0) {
           const hit = KEYWORDS.find(([re]) => re.test(task));
-          targets = [hit ? hit[1] : "rajaie"];
+          targets = [hit ? hit[1] : "sektor"];
         }
         const names = targets.map((t) => AGENTS.find((a) => a.id === t)?.name ?? t);
         text = `[MOCK] On it. Routing this to ${names.join(" and ")}. I'll meet them in the Meeting Room and approve only from proof.`;

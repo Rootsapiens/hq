@@ -1,6 +1,6 @@
-# HQ: Creative Studio office
+# Rootsapiens HQ
 
-A local web app that shows the Creative Studio agents as pixel characters in an isometric office,
+A web app that shows the Rootsapiens (digital transformation) AI team as pixel characters in an isometric office,
 with live status, streamed chat and Boss delegation. The server is the only source of truth: every
 step a character takes comes from a real status event (IDLE, WORKING, THINKING, MEETING, DONE, ERROR).
 
@@ -33,12 +33,12 @@ shown as a `MOCK` badge in the top bar. Never commit `.env`.
 
 | Agent | Role | Room | Shirt |
 |---|---|---|---|
-| Cyrex | Boss / Chief of Staff, the only one with `assign_task` | Command Deck | gold |
-| Rajaie | Head of IT, code and QA | Engineering | blue |
-| Aktham | Art, sound, video, ChatGPT art | Art Studio | pink |
-| Zurub | Business, scripts, story | Writers Room | green |
-| Razan | HR and watchdog | HR | purple |
-| Nedal | Animator in 7rrek | Animation Bay | orange |
+| Shao Kahn | Boss / Chief of Staff, the only one with `assign_task` | Command Deck | gold |
+| Sektor | Head of IT, code and QA | Engineering | blue |
+| Sindel | Art, sound, video, ChatGPT art | Art Studio | pink |
+| Nightwolf | Business, scripts, story | Writers Room | green |
+| Sonya | HR and watchdog | HR | purple |
+| Liu Kang | Animator in 7rrek | Animation Bay | orange |
 
 System prompts are short summaries of the agent files; the agent files themselves are not read at runtime.
 
@@ -64,3 +64,25 @@ Characters are drawn in code (16x24, shirt tinted with the agent colour). To rep
 
 - `npm run check`: TypeScript strict on every package, then vitest (state machine, A* and map, WS contract, mock end-to-end).
 - `npm run e2e`: Playwright against `npm run dev` in MOCK mode; screenshots go to `docs/screenshots/`.
+
+## Go live (public URL)
+
+One container serves the web app, the API and the WebSocket. Visitors watch the office live; only the owner can
+sign in (top-right, "Owner sign in") to talk to the team, pause, and read chats and files.
+
+1. Push this repo to GitHub.
+2. On [Render](https://render.com): New -> Blueprint -> pick the repo (it reads `render.yaml`).
+3. Fill in `HQ_OWNER_TOKEN` (your owner password, 16+ characters) and `ANTHROPIC_API_KEY`
+   (leave empty for a MOCK demo that costs nothing).
+4. Open the `*.onrender.com` URL and share it.
+
+Any host that runs a Dockerfile works the same way (Railway, Fly.io, a VPS: `docker build -t hq . && docker run -p 8787:8787 -v hq-data:/data -e HQ_OWNER_TOKEN=... hq`).
+
+| Env | Meaning |
+|---|---|
+| `HQ_OWNER_TOKEN` | Turns on public mode. Required to listen on anything but 127.0.0.1. |
+| `HQ_PUBLIC_DETAIL` | `office` (default): visitors see the office and statuses only. `full`: visitors also read chats, activity and files (never act). |
+| `HQ_HOST` / `PORT` | Set by the Dockerfile / the host. |
+| `HQ_STATIC_DIR` | Folder with the built web app (`npm run build` -> `web/dist`). |
+
+Cost guard: with a real `ANTHROPIC_API_KEY`, only the signed-in owner can start work, so visitors cannot spend your key.

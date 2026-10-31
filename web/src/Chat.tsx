@@ -3,7 +3,7 @@ import type { AgentView, ChatMessage, FileMeta } from "../../shared/events";
 import { loadThread, sendMessage } from "./net";
 import { focusAgent } from "./OfficeCanvas";
 import { store, useHq } from "./store";
-import { StatusBadge, Swatch, timeOf } from "./ui";
+import { Icon, StatusBadge, Swatch, timeOf } from "./ui";
 
 const EMPTY: ChatMessage[] = [];
 
@@ -24,9 +24,9 @@ function Bubble({ m, agents, self, files }: { m: ChatMessage; agents: AgentView[
   return (
     <div data-testid="chat-message" data-author={m.author} className={`flex ${mine ? "justify-end" : "justify-start"}`}>
       <div
-        className={`max-w-[85%] rounded-lg px-3 py-2 text-[13px] leading-relaxed ${
+        className={`max-w-[85%] rounded-lg px-3 py-2 text-sm leading-relaxed ${
           mine
-            ? "bg-violet-600/80 text-white"
+            ? "bg-sky-700/90 text-white"
             : system || m.state === "error"
               ? "bg-red-500/15 text-red-200 ring-1 ring-red-500/30"
               : fromOther
@@ -34,9 +34,9 @@ function Bubble({ m, agents, self, files }: { m: ChatMessage; agents: AgentView[
                 : "bg-ink-800 text-slate-100"
         }`}
       >
-        <div className="mb-0.5 flex items-center gap-1.5 text-[10px] text-slate-400">
+        <div className="mb-0.5 flex items-center gap-1.5 text-[11px] text-slate-400">
           {author && <Swatch agent={author} size={8} />}
-          <span className="font-pixel text-[7px] uppercase tracking-wide" style={author ? { color: author.color } : undefined}>
+          <span className="text-[11px] font-semibold uppercase tracking-wider" style={author ? { color: author.color } : undefined}>
             {mine ? "You" : system ? "System" : (author?.name ?? m.author)}
           </span>
           <span>{timeOf(m.ts)}</span>
@@ -52,7 +52,8 @@ function Bubble({ m, agents, self, files }: { m: ChatMessage; agents: AgentView[
                 onClick={() => store.openFile(f.id)}
                 className="rounded bg-ink-900/70 px-1.5 py-0.5 font-mono text-[11px] text-sky-300 ring-1 ring-ink-600 hover:ring-sky-400"
               >
-                ▤ {f.name} v{f.version}
+                <Icon name="file" size={12} className="mr-1 align-[-2px]" />
+                {f.name} v{f.version}
               </button>
             ))}
           </div>
@@ -154,7 +155,7 @@ export function Chat() {
       <div ref={listRef} className="scroll-thin flex min-h-0 flex-1 flex-col gap-2 overflow-y-auto px-3 py-3" data-testid="chat-list">
         {messages.length === 0 && (
           <p className="mt-6 text-center text-xs text-slate-500">
-            {agent?.isBoss ? "Brief the Boss. Use @name to delegate, e.g. “@rajaie fix the build”." : `No messages with ${agent?.name ?? "this agent"} yet.`}
+            {agent?.isBoss ? "Brief the Boss. Use @name to delegate, e.g. “@sektor fix the build”." : `No messages with ${agent?.name ?? "this agent"} yet.`}
           </p>
         )}
         {messages.map((m) => (
@@ -189,15 +190,15 @@ export function Chat() {
             value={text}
             onChange={(e) => setText(e.target.value)}
             onKeyDown={onKey}
-            placeholder={agent?.isBoss ? "Message Cyrex… (@name to delegate)" : `Message ${agent?.name ?? ""}…`}
-            className="min-h-[40px] flex-1 resize-none rounded-md bg-ink-850 px-3 py-2 text-[13px] text-slate-100 placeholder:text-slate-500 ring-1 ring-ink-600 outline-none focus:ring-violet-500"
+            placeholder={agent?.isBoss ? "Message Shao Kahn… (@name to delegate)" : `Message ${agent?.name ?? ""}…`}
+            className="min-h-[40px] flex-1 resize-none rounded-md bg-ink-850 px-3 py-2 text-sm text-slate-100 placeholder:text-slate-500 ring-1 ring-ink-600 outline-none focus:ring-sky-500"
           />
           <button
             type="button"
             data-testid="chat-send"
             onClick={() => void submit()}
             disabled={sending || !text.trim()}
-            className="rounded-md bg-violet-600 px-3 py-2 font-pixel text-[8px] text-white disabled:opacity-40"
+            className="rounded-md bg-sky-600 px-3 py-2 text-xs font-semibold uppercase tracking-wider text-white disabled:opacity-40"
           >
             SEND
           </button>

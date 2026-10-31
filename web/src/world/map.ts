@@ -1,5 +1,6 @@
 // The office floor plan: a 3x3 grid of rooms joined by doorways, with furniture as blocked tiles.
 import type { RoomId } from "../../../shared/events";
+import { ROOM_LABELS } from "../../../shared/company";
 import type { Point, WalkGrid } from "./astar";
 
 export const ROOM_W = 8;
@@ -29,15 +30,15 @@ export interface RoomDef {
 }
 
 const LAYOUT: ReadonlyArray<{ id: RoomId; label: string; col: number; row: number; floor: number }> = [
-  { id: "command-deck", label: "COMMAND DECK", col: 0, row: 0, floor: 0x3a3350 },
-  { id: "engineering", label: "ENGINEERING", col: 1, row: 0, floor: 0x24384f },
-  { id: "art-studio", label: "ART STUDIO", col: 2, row: 0, floor: 0x4a2f45 },
-  { id: "meeting-room", label: "MEETING ROOM", col: 0, row: 1, floor: 0x3d3a2c },
-  { id: "commons", label: "COMMONS", col: 1, row: 1, floor: 0x2c3a3a },
-  { id: "pantry", label: "PANTRY", col: 2, row: 1, floor: 0x40362a },
-  { id: "writers-room", label: "WRITERS ROOM", col: 0, row: 2, floor: 0x2a4031 },
-  { id: "hr", label: "HR", col: 1, row: 2, floor: 0x3a2d4a },
-  { id: "animation-bay", label: "ANIMATION BAY", col: 2, row: 2, floor: 0x4a3526 },
+  { id: "command-deck", label: ROOM_LABELS["command-deck"].toUpperCase(), col: 0, row: 0, floor: 0x3a3350 },
+  { id: "engineering", label: ROOM_LABELS["engineering"].toUpperCase(), col: 1, row: 0, floor: 0x24384f },
+  { id: "art-studio", label: ROOM_LABELS["art-studio"].toUpperCase(), col: 2, row: 0, floor: 0x4a2f45 },
+  { id: "meeting-room", label: ROOM_LABELS["meeting-room"].toUpperCase(), col: 0, row: 1, floor: 0x3d3a2c },
+  { id: "commons", label: ROOM_LABELS["commons"].toUpperCase(), col: 1, row: 1, floor: 0x2c3a3a },
+  { id: "pantry", label: ROOM_LABELS["pantry"].toUpperCase(), col: 2, row: 1, floor: 0x40362a },
+  { id: "writers-room", label: ROOM_LABELS["writers-room"].toUpperCase(), col: 0, row: 2, floor: 0x2a4031 },
+  { id: "hr", label: ROOM_LABELS["hr"].toUpperCase(), col: 1, row: 2, floor: 0x3a2d4a },
+  { id: "animation-bay", label: ROOM_LABELS["animation-bay"].toUpperCase(), col: 2, row: 2, floor: 0x4a3526 },
 ];
 
 export const ROOMS: readonly RoomDef[] = LAYOUT.map((r) => {

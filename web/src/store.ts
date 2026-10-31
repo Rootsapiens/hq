@@ -20,6 +20,8 @@ export interface HqState {
   openFile: string | null;
   selected: string;
   tab: Tab;
+  /** From /api/me. Local HQ: always the owner. */
+  access: { public: boolean; canRead: boolean; canAct: boolean };
 }
 
 let state: HqState = {
@@ -34,8 +36,9 @@ let state: HqState = {
   threads: {},
   files: [],
   openFile: null,
-  selected: "cyrex",
+  selected: "kahn",
   tab: "chat",
+  access: { public: false, canRead: true, canAct: true },
 };
 
 const listeners = new Set<() => void>();
@@ -51,8 +54,9 @@ export const store = {
     return () => listeners.delete(l);
   },
   setConnected: (connected: boolean) => set({ connected }),
-  select: (selected: string, tab?: Tab) => set({ selected, ...(tab ? { tab } : {}) }),
+  select: (selected: string, tab?: Tab) => set({ selected, ...(tab && state.access.canRead ? { tab } : {}) }),
   setTab: (tab: Tab) => set({ tab }),
+  setAccess: (access: HqState["access"]) => set({ access, ...(access.canRead ? {} : { tab: "roster" as Tab }) }),
   openFile: (openFile: string | null) => set({ openFile, ...(openFile ? { tab: "files" as Tab } : {}) }),
   setThread(thread: string, messages: ChatMessage[]): void {
     // merge: keep any live messages newer than the fetched page

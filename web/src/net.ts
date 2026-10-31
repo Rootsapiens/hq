@@ -22,7 +22,9 @@ export function connect(): () => void {
       if (stopped) return ws.close();
       retry = 0;
       store.setConnected(true);
-      void loadThread(store.get().selected);
+      void loadAccess().then(() => {
+        if (store.get().access.canRead) void loadThread(store.get().selected);
+      });
     };
     ws.onmessage = (ev) => {
       if (stopped || socket !== ws) return;
@@ -67,6 +69,37 @@ export async function sendMessage(id: string, text: string): Promise<PostMessage
   } catch {
     return { ok: false, error: "server unreachable" };
   }
+}
+
+export async function loadAccess(): Promise<void> {
+  try {
+    const res = await fetch("/api/me");
+    if (!res.ok) return;
+    const me = (await res.json()) as { public: boolean; canRead: boolean; canAct: boolean };
+    store.setAccess({ public: !!me.public, canRead: !!me.canRead, canAct: !!me.canAct });
+  } catch {
+    /* offline */
+  }
+}
+
+/** Owner login (public HQ). On success the page reloads so the stream reconnects as the owner. */
+export async function login(token: string): Promise<string | null> {
+  try {
+    const res = await fetch("/api/login", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ token }) });
+    if (res.ok) {
+      location.reload();
+      return null;
+    }
+    const body = (await res.json()) as { error?: string };
+    return body.error ?? "login failed";
+  } catch {
+    return "server unreachable";
+  }
+}
+
+export async function logout(): Promise<void> {
+  await fetch("/api/logout", { method: "POST", headers: { "content-type": "application/json" }, body: "{}" }).catch(() => undefined);
+  location.reload();
 }
 
 export async function loadFile(id: string): Promise<HqFile | null> {

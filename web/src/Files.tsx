@@ -3,7 +3,7 @@ import { useEffect, useMemo, useState } from "react";
 import type { HqFile } from "../../shared/events";
 import { fileDownloadUrl, loadFile } from "./net";
 import { store, useHq } from "./store";
-import { Swatch, timeOf } from "./ui";
+import { Icon, Swatch, timeOf } from "./ui";
 
 const kb = (n: number) => (n < 1024 ? `${n} B` : `${(n / 1024).toFixed(1)} KB`);
 
@@ -25,11 +25,13 @@ function Viewer({ id }: { id: string }) {
     <div className="flex h-full min-h-0 flex-col" data-testid="file-viewer">
       <div className="flex items-center gap-2 border-b border-ink-700 px-3 py-2 text-xs">
         <button type="button" onClick={() => store.openFile(null)} className="shrink-0 whitespace-nowrap rounded px-1.5 py-0.5 text-slate-400 hover:bg-ink-800" data-testid="file-back">
-          ← Files
+          <Icon name="back" size={13} className="mr-1 align-[-2px]" />
+          Files
         </button>
         <span className="truncate font-mono text-slate-100">{file.name}</span>
         <span className="text-slate-500">v{file.version}</span>
         <a href={fileDownloadUrl(file.id)} className="ml-auto shrink-0 rounded bg-ink-800 px-2 py-0.5 text-sky-300 ring-1 ring-ink-600 hover:ring-sky-400" data-testid="file-download">
+          <Icon name="download" size={13} className="mr-1 align-[-2px]" />
           Download
         </a>
       </div>
@@ -84,10 +86,10 @@ export function Files() {
                 onClick={() => store.openFile(f.id)}
                 className="flex w-full items-start gap-2.5 rounded-lg p-2 text-left hover:bg-ink-850"
               >
-                <span className="mt-0.5 text-sm" style={a ? { color: a.color } : undefined}>▤</span>
+                <span className="mt-0.5" style={a ? { color: a.color } : undefined}><Icon name="file" size={15} /></span>
                 <span className="min-w-0 flex-1">
                   <span className="flex items-baseline gap-1.5">
-                    <span className="truncate font-mono text-[13px] text-slate-100">{f.name}</span>
+                    <span className="truncate font-mono text-sm text-slate-100">{f.name}</span>
                     <span className="shrink-0 text-[11px] text-slate-500">v{f.version}</span>
                   </span>
                   <span className="block truncate text-xs text-slate-400">

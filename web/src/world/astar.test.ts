@@ -88,7 +88,7 @@ describe("iso + sprites", () => {
   });
 
   it("generates 16x24 frames tinted with the agent colour, 4 walk frames that differ", () => {
-    const pal = paletteFor("rajaie", "#3b82f6");
+    const pal = paletteFor("sektor", "#3b82f6");
     const f0 = drawFrame(pal, "front", 0);
     const f1 = drawFrame(pal, "front", 1);
     expect(f0.length).toBe(SPRITE_W * SPRITE_H);
