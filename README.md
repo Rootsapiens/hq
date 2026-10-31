@@ -1,6 +1,6 @@
 # Rootsapiens HQ
 
-A web app that shows the Rootsapiens (digital transformation) AI team as pixel characters in an isometric office,
+A web app that shows the Rootsapiens AI social media agency team (structure: [docs/company.md](docs/company.md)) as pixel characters in an isometric office,
 with live status, streamed chat and Boss delegation. The server is the only source of truth: every
 step a character takes comes from a real status event (IDLE, WORKING, THINKING, MEETING, DONE, ERROR).
 
@@ -29,16 +29,16 @@ shown as a `MOCK` badge in the top bar. Never commit `.env`.
   version (newest first, filter by agent) with a read-only viewer and a Download button.
 - **Top bar**: working / done / needs-input counters, connection dot, mode badge, global PAUSE (no new jobs start while paused).
 
-## The team (`server/agents.config.ts`)
+## The team (`server/agents.config.ts`, structure in `docs/company.md`)
 
 | Agent | Role | Room | Shirt |
 |---|---|---|---|
-| Shao Kahn | Boss / Chief of Staff, the only one with `assign_task` | Command Deck | gold |
-| Sektor | Head of IT, code and QA | Engineering | blue |
-| Sindel | Art, sound, video, ChatGPT art | Art Studio | pink |
-| Nightwolf | Business, scripts, story | Writers Room | green |
-| Sonya | HR and watchdog | HR | purple |
-| Liu Kang | Animator in 7rrek | Animation Bay | orange |
+| Shao Kahn | Agency Director, the only one with `assign_task` | Agency Desk | gold |
+| Nightwolf | Strategy & Research: briefs, calendars, trends | Strategy & Copy | green |
+| Liu Kang | Content, Copy & Reels: captions, hooks, scripts | Reels Studio | orange |
+| Sindel | Creative Director: brand kit, AI imagery, carousels | Creative Studio | pink |
+| Sektor | AI Production & Data: reel specs, scheduling plans, platform | Production & Data | blue |
+| Sonya | Quality & Client Success: scored QA gate, onboarding, watchdog | Quality Desk | purple |
 
 System prompts are short summaries of the agent files; the agent files themselves are not read at runtime.
 

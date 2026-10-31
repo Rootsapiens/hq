@@ -11,11 +11,11 @@ export interface MockOptions {
 }
 
 const KEYWORDS: ReadonlyArray<[RegExp, string]> = [
-  [/\b(code|build|bug|test|qa|deploy|server|fix|program|platform|live|web|api|automat\w*|integrat\w*)\b/i, "sektor"],
-  [/\b(design|ux|ui|brand|logo|wireframe|image|visual)\b/i, "sindel"],
-  [/\b(research|market|competitor|strategy|proposal|pricing|price|assessment|pitch)\b/i, "nightwolf"],
-  [/\b(team|hire|hiring|onboard\w*|people|training|role|audit|hr)\b/i, "sonya"],
-  [/\b(video|demo|explainer|content|social|media|animate|animation)\b/i, "liukang"],
+  [/\b(qa|quality|review|check|approve|brand safety|onboard\w*|team|client success)\b/i, "sonya"],
+  [/\b(reel|reels|script|caption|captions|copy|hook|hooks|story|stories)\b/i, "liukang"],
+  [/\b(design|visual|image|carousel|thumbnail|brand kit|logo|cover)\b/i, "sindel"],
+  [/\b(edit|video|voice|schedul\w*|analytics|report|code|build|fix|deploy|platform|automat\w*)\b/i, "sektor"],
+  [/\b(research|trend|trends|competitor|audience|brief|strategy|calendar|plan)\b/i, "nightwolf"],
 ];
 
 class MockApiError extends Error {

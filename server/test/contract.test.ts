@@ -91,7 +91,7 @@ describe("WS contract", () => {
     expect(snap?.type).toBe("snapshot");
     if (snap?.type !== "snapshot") return;
     expect(snap.mode).toBe("mock");
-    expect(snap.agents.map((a) => a.id)).toEqual(["kahn", "sektor", "sindel", "nightwolf", "sonya", "liukang"]);
+    expect(snap.agents.map((a) => a.id)).toEqual(["kahn", "nightwolf", "liukang", "sindel", "sektor", "sonya"]);
     expect(snap.agents.filter((a) => a.isBoss).map((a) => a.id)).toEqual(["kahn"]);
     expect(new Set(snap.agents.map((a) => a.color)).size).toBe(6);
     expect(snap.agents.every((a) => a.status === "IDLE")).toBe(true);

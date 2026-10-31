@@ -1,18 +1,18 @@
 // Company identity shown in the UI and given to every agent. Edit here to rebrand.
 export const COMPANY = {
   name: "Rootsapiens",
-  kind: "Digital Transformation",
-  pitch: "We move companies from paper, spreadsheets and legacy systems to simple, working digital products and automated workflows.",
+  kind: "AI Social Media Agency",
+  pitch: "We plan, create and quality-check social media content for brands (posts, carousels, reels and stories), using AI for speed and people-grade review for quality.",
 } as const;
 
 /** Display names of the office rooms (ids stay stable for saved data and tests). */
 export const ROOM_LABELS = {
-  "command-deck": "Executive Office",
-  engineering: "Engineering",
-  "art-studio": "Design Studio",
-  "writers-room": "Research Lab",
-  hr: "People & Culture",
-  "animation-bay": "Media Lab",
+  "command-deck": "Agency Desk",
+  engineering: "Production & Data",
+  "art-studio": "Creative Studio",
+  "writers-room": "Strategy & Copy",
+  hr: "Quality Desk",
+  "animation-bay": "Reels Studio",
   "meeting-room": "Meeting Room",
   pantry: "Pantry",
   commons: "Commons",
