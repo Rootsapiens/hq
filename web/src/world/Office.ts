@@ -4,7 +4,7 @@ import { Application, Container, Graphics, Rectangle, Sprite, Text, Texture, Tex
 import type { AgentStatus, AgentView } from "../../../shared/events";
 import { findPath, type Point } from "./astar";
 import { activityFor, badgeFor, goalFor, pickWanderTile } from "./behavior";
-import { BRAIN_CENTER, FURNITURE, GRID_H, GRID_W, OFFICE_GRID, ROOMS, ROOM_W, isWall, roomAt, type Furniture } from "./map";
+import { BRAIN_CENTER, FURNITURE, GRID_H, GRID_W, OFFICE_GRID, ROOMS, ROOM_RUG, ROOM_W, isWall, roomAt, type Furniture } from "./map";
 import { dirFromStep, toScreen, type Dir } from "./iso";
 import { SPRITE_H as RAW_H, SPRITE_W, loadOverride, paletteFor, sheetCanvas } from "./sprites";
 
@@ -29,6 +29,8 @@ export interface CharacterDebug {
   moving: boolean;
   dir: Dir;
   badge: string | null;
+  /** Name-plate rectangle in world pixels (used by tests to prove plates never overlap). */
+  plate: { x0: number; x1: number; top: number; bottom: number };
 }
 
 interface Frames {
@@ -279,6 +281,12 @@ class Character {
       moving: this.moving,
       dir: this.dir,
       badge: this.badgeKind,
+      plate: {
+        x0: +(this.tag.x - this.tagW / 2).toFixed(1),
+        x1: +(this.tag.x + this.tagW / 2).toFixed(1),
+        top: +(this.tag.y - SPRITE_H - 14).toFixed(1),
+        bottom: +(this.tag.y - SPRITE_H - 2).toFixed(1),
+      },
     };
   }
 }
@@ -374,6 +382,17 @@ export class Office {
         g.poly([a.x, a.y, b.x, b.y, cc.x, cc.y, d.x, d.y]).fill(c);
       }
     this.floor.addChild(g);
+    const rugs = new Graphics();
+    for (const r of ROOMS) {
+      const color = ROOM_RUG[r.id];
+      if (color === undefined) continue;
+      const a = toScreen(r.x0 + 1.6, r.y0 + 0.6);
+      const b = toScreen(r.x0 + 6.4, r.y0 + 0.6);
+      const c = toScreen(r.x0 + 6.4, r.y0 + 3.6);
+      const d = toScreen(r.x0 + 1.6, r.y0 + 3.6);
+      rugs.poly([a.x, a.y, b.x, b.y, c.x, c.y, d.x, d.y]).fill({ color, alpha: 0.16 }).stroke({ width: 1, color, alpha: 0.35 });
+    }
+    this.floor.addChild(rugs);
     for (const r of ROOMS) {
       const t = new Text({
         text: r.label,
@@ -508,6 +527,73 @@ export class Office {
       }
       case "sofa":
         this.block(f.x, f.y, 7, 0xa3acb5, 0.12); // grey cube seat
+        break;
+      case "kpiboard": {
+        // wall screen with a rising bar chart
+        const g = this.block(f.x, f.y, 6, 0x9ca3af, 0.3);
+        const p = toScreen(f.x + 0.5, f.y + 0.5);
+        g.roundRect(p.x - 12, p.y - 34, 24, 16, 2).fill(0x0f172a);
+        [4, 7, 6, 10, 12].forEach((h, i) => g.rect(p.x - 9 + i * 4, p.y - 20 - h, 3, h).fill(i === 4 ? 0x22c55e : 0x38bdf8));
+        g.rect(p.x - 1, p.y - 18, 2, 12).fill(0x9ca3af);
+        break;
+      }
+      case "server": {
+        const g = this.block(f.x, f.y, 28, 0x1f2937, 0.14);
+        const p = toScreen(f.x + 0.5, f.y + 0.86);
+        for (let i = 0; i < 5; i++) {
+          g.rect(p.x - 6, p.y - 26 + i * 5, 9, 1).fill(0x374151);
+          g.rect(p.x + 4, p.y - 26 + i * 5, 1.5, 1.5).fill(i % 2 ? 0x22c55e : 0x38bdf8);
+        }
+        break;
+      }
+      case "moodboard":
+      case "whiteboard":
+      case "checkboard": {
+        const g = new Graphics();
+        const p = toScreen(f.x + 0.5, f.y + 0.5);
+        g.moveTo(p.x - 7, p.y).lineTo(p.x - 5, p.y - 14).moveTo(p.x + 7, p.y).lineTo(p.x + 5, p.y - 14).stroke({ width: 1.5, color: 0x9ca3af });
+        g.roundRect(p.x - 12, p.y - 32, 24, 18, 1.5).fill(0xffffff).stroke({ width: 1, color: 0xb8bec4 });
+        if (f.kind === "moodboard") {
+          [0xf472b6, 0xfbbf24, 0x38bdf8, 0x34d399, 0xa78bfa, 0xfb923c].forEach((c, i) =>
+            g.rect(p.x - 10 + (i % 3) * 7, p.y - 30 + Math.floor(i / 3) * 8, 6, 6).fill(c),
+          );
+        } else if (f.kind === "whiteboard") {
+          [0xfde047, 0xf9a8d4, 0x93c5fd, 0xfde047, 0x86efac].forEach((c, i) => g.rect(p.x - 10 + i * 4, p.y - 29 + (i % 2) * 6, 4, 4).fill(c));
+          g.moveTo(p.x - 9, p.y - 18).lineTo(p.x + 9, p.y - 18).stroke({ width: 1, color: 0x64748b });
+        } else {
+          for (let i = 0; i < 3; i++) {
+            const y = p.y - 28 + i * 5;
+            g.moveTo(p.x - 9, y).lineTo(p.x - 7, y + 2).lineTo(p.x - 4, y - 2).stroke({ width: 1.2, color: 0x16a34a });
+            g.rect(p.x - 2, y - 0.5, 11, 1).fill(0x94a3b8);
+          }
+        }
+        g.zIndex = f.x + f.y + 1;
+        this.objects.addChild(g);
+        break;
+      }
+      case "ringlight": {
+        const g = new Graphics();
+        const p = toScreen(f.x + 0.5, f.y + 0.5);
+        g.moveTo(p.x - 5, p.y).lineTo(p.x, p.y - 22).lineTo(p.x + 5, p.y).stroke({ width: 1.2, color: 0x6b7280 });
+        g.circle(p.x, p.y - 30, 9).fill({ color: 0xfef9c3, alpha: 0.25 });
+        g.circle(p.x, p.y - 30, 7).stroke({ width: 3, color: 0xfffbeb });
+        g.zIndex = f.x + f.y + 1;
+        this.objects.addChild(g);
+        break;
+      }
+      case "camera": {
+        const g = new Graphics();
+        const p = toScreen(f.x + 0.5, f.y + 0.5);
+        g.moveTo(p.x - 6, p.y).lineTo(p.x, p.y - 16).lineTo(p.x + 6, p.y).moveTo(p.x, p.y - 16).lineTo(p.x, p.y).stroke({ width: 1.2, color: 0x374151 });
+        g.roundRect(p.x - 6, p.y - 24, 10, 7, 1.5).fill(0x111827);
+        g.circle(p.x + 5, p.y - 20.5, 2.5).fill(0x334155).stroke({ width: 1, color: 0x94a3b8 });
+        g.circle(p.x - 4, p.y - 22, 0.9).fill(0xef4444);
+        g.zIndex = f.x + f.y + 1;
+        this.objects.addChild(g);
+        break;
+      }
+      case "backdrop":
+        this.block(f.x, f.y, 30, 0x22c55e, 0.4); // green screen
         break;
       case "brain":
         this.block(f.x, f.y, 5, 0xf5f5f4, 0);
@@ -713,8 +799,7 @@ export class Office {
         if (!hit) break;
         shift = c.root.y - SPRITE_H - (hit.top - GAP);
       }
-      c.tagShift += (shift - c.tagShift) * 0.35; // glide rather than jump
-      if (Math.abs(shift - c.tagShift) < 0.5) c.tagShift = shift;
+      c.tagShift = shift; // place directly: easing let moving plates cross each other mid-glide
       c.tag.position.set(c.root.x, c.root.y - c.tagShift);
       const bottom = c.root.y - SPRITE_H - shift;
       placed.push({ x0, x1, top: bottom - 14 - extra, bottom });

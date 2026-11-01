@@ -1,34 +1,99 @@
 {
   "cyrex": [
-    "campaign-orchestration"
+    "campaign-orchestration",
+    "marketing-plan",
+    "launch",
+    "offers",
+    "pricing",
+    "product-marketing",
+    "marketing-ideas",
+    "co-marketing",
+    "analytics",
+    "marketing-loops",
+    "content-matrix",
+    "post-scorer",
+    "niche-research"
   ],
   "zurub": [
     "social-research-brief",
     "content-calendar",
-    "competitor-scan"
+    "competitor-scan",
+    "customer-research",
+    "competitors",
+    "competitor-profiling",
+    "reverse-engineer-marketing",
+    "marketing-psychology",
+    "content-strategy",
+    "ai-seo",
+    "niche-research",
+    "content-matrix",
+    "profile-optimizer"
   ],
   "nedal": [
     "reel-script",
     "caption-writing",
-    "hook-writing"
+    "hook-writing",
+    "social",
+    "copywriting",
+    "copy-editing",
+    "video",
+    "emails",
+    "influencer-marketing",
+    "community-marketing",
+    "reels-scripting",
+    "hook-generator",
+    "post-writer",
+    "voice-builder",
+    "newsletter-voice",
+    "pinned-comment",
+    "post-formatter",
+    "quote-post"
   ],
   "aktham": [
     "carousel-design",
     "ai-image-prompting",
     "brand-kit",
     "theme-factory",
-    "canvas-design"
+    "canvas-design",
+    "image",
+    "ad-creative",
+    "lead-magnets",
+    "cro",
+    "site-architecture",
+    "graphic-designer",
+    "youtube-thumbnail",
+    "gemini-carousel",
+    "gemini-infographic",
+    "instagram-carousel"
   ],
   "rajaie": [
     "reel-edit-spec",
     "platform-specs",
     "scheduling-plan",
     "frontend-design",
-    "mcp-builder"
+    "mcp-builder",
+    "conversion-tracking",
+    "attribution",
+    "schema",
+    "seo-audit",
+    "ads",
+    "analytics-dashboard",
+    "engineering-devops-automator",
+    "engineering-security-engineer",
+    "engineering-frontend-developer",
+    "engineering-system-designer"
   ],
   "razan": [
     "content-qa-checklist",
     "team-onboarding",
-    "internal-comms"
+    "internal-comms",
+    "onboarding",
+    "churn-prevention",
+    "public-relations",
+    "sales-enablement",
+    "referrals",
+    "revops",
+    "prospecting",
+    "post-scorer"
   ]
 }

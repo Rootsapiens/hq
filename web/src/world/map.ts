@@ -8,7 +8,9 @@ export const ROOM_H = 6;
 export const GRID_W = 3 * ROOM_W + 4; // 28
 export const GRID_H = 3 * ROOM_H + 4; // 22
 
-export type FurnitureKind = "desk" | "table" | "counter" | "plant" | "shelf" | "brain" | "screen" | "sofa" | "easel";
+export type FurnitureKind =
+  | "desk" | "table" | "counter" | "plant" | "shelf" | "brain" | "screen" | "sofa" | "easel"
+  | "kpiboard" | "server" | "moodboard" | "whiteboard" | "checkboard" | "ringlight" | "camera" | "backdrop";
 
 export interface Furniture {
   kind: FurnitureKind;
@@ -80,6 +82,35 @@ const rel = (r: RoomDef, dx: number, dy: number) => ({ x: r.x0 + dx, y: r.y0 + d
 /** Work rooms: desk at (3,2)-(4,2); the owner sits behind it at (3,1) facing the camera. */
 const WORK_ROOMS: readonly RoomId[] = ["command-deck", "engineering", "art-studio", "writers-room", "hr", "animation-bay"];
 
+/**
+ * Each work room is furnished for its owner's job. Interior tiles are dx 0..7, dy 0..5; keep free the
+ * tiles inside each doorway (dx 3-4 on dy 0 and 5, dy 2-3 on dx 0 and 7), the seat (3,1) and the desks.
+ */
+const ROOM_DECOR: Partial<Record<RoomId, ReadonlyArray<readonly [FurnitureKind, number, number]>>> = {
+  // Cyrex, Agency Desk: results wall and a lounge corner
+  "command-deck": [["kpiboard", 1, 0], ["sofa", 0, 5], ["sofa", 1, 5]],
+  // Rajaie, Production & Data: server racks
+  engineering: [["server", 6, 0], ["server", 0, 5], ["server", 7, 5]],
+  // Aktham, Creative Studio: mood board and a second easel
+  "art-studio": [["moodboard", 1, 0], ["easel", 7, 5], ["plant", 0, 5]],
+  // Zurub, Strategy & Copy: whiteboard wall and bookshelves
+  "writers-room": [["whiteboard", 1, 0], ["whiteboard", 2, 0], ["shelf", 6, 5], ["shelf", 7, 5]],
+  // Razan, Quality Desk: checklist board and a 1:1 corner
+  hr: [["checkboard", 1, 0], ["sofa", 6, 5], ["sofa", 7, 5], ["plant", 0, 5]],
+  // Nedal, Reels Studio: green screen, ring light, camera on a tripod
+  "animation-bay": [["backdrop", 0, 5], ["backdrop", 1, 5], ["ringlight", 6, 4], ["camera", 5, 4]],
+};
+
+/** Rug colour under each work room's desk area (the owner's shirt colour family). */
+export const ROOM_RUG: Partial<Record<RoomId, number>> = {
+  "command-deck": 0xe8b931,
+  engineering: 0x3b82f6,
+  "art-studio": 0xec4899,
+  "writers-room": 0x22c55e,
+  hr: 0xa855f7,
+  "animation-bay": 0xf97316,
+};
+
 function buildFurniture(): Furniture[] {
   const f: Furniture[] = [];
   for (const id of WORK_ROOMS) {
@@ -88,6 +119,7 @@ function buildFurniture(): Furniture[] {
     f.push({ kind: "plant", ...rel(r, 0, 0) });
     f.push({ kind: id === "art-studio" || id === "animation-bay" ? "easel" : "shelf", ...rel(r, 7, 0) });
     if (id === "command-deck") f.push({ kind: "screen", ...rel(r, 6, 4) }, { kind: "screen", ...rel(r, 7, 4) });
+    for (const [kind, dx, dy] of ROOM_DECOR[id] ?? []) f.push({ kind, ...rel(r, dx, dy) });
   }
   const meet = room("meeting-room");
   for (let dx = 2; dx <= 5; dx++) for (let dy = 2; dy <= 3; dy++) f.push({ kind: "table", ...rel(meet, dx, dy) });

@@ -64,14 +64,26 @@ Each agent carries a library of skills (playbooks in `skills/`), assigned in `sk
 Agents see their skills' names and descriptions and open the full playbook with the `use_skill` tool
 when the work calls for it. The Roster shows every agent's skills.
 
-| Agent | Agency skills (ours) | Imported (Apache-2.0, anthropics/skills) |
+Every agent has at least 10 skills.
+
+| Agent | Agency skills (ours) | Imported |
 |---|---|---|
-| Cyrex | campaign-orchestration | |
-| Zurub | social-research-brief, content-calendar, competitor-scan | |
-| Nedal | reel-script, caption-writing, hook-writing | |
-| Aktham | carousel-design, ai-image-prompting, brand-kit | theme-factory, canvas-design |
-| Rajaie | reel-edit-spec, platform-specs, scheduling-plan | frontend-design, mcp-builder |
-| Razan | content-qa-checklist, team-onboarding | internal-comms |
+| Cyrex (CEO) | campaign-orchestration | marketing-plan, launch, offers, pricing, product-marketing, marketing-ideas, co-marketing, analytics, marketing-loops; shared for review: content-matrix, post-scorer, niche-research |
+| Zurub (CSO) | social-research-brief, content-calendar, competitor-scan | customer-research, competitors, competitor-profiling, reverse-engineer-marketing, marketing-psychology, content-strategy, ai-seo; niche-research, content-matrix, profile-optimizer |
+| Nedal (CMO) | reel-script, caption-writing, hook-writing | social, copywriting, copy-editing, video, emails, influencer-marketing, community-marketing; reels-scripting, hook-generator, post-writer, voice-builder, newsletter-voice, pinned-comment, post-formatter, quote-post |
+| Aktham (CCO) | carousel-design, ai-image-prompting, brand-kit | theme-factory, canvas-design; image, ad-creative, lead-magnets, cro, site-architecture; graphic-designer, youtube-thumbnail, gemini-carousel, gemini-infographic; instagram-carousel |
+| Rajaie (CTO) | reel-edit-spec, platform-specs, scheduling-plan | frontend-design, mcp-builder; conversion-tracking, attribution, schema, seo-audit, ads; analytics-dashboard; engineering-devops-automator, engineering-security-engineer, engineering-frontend-developer, engineering-system-designer |
+| Razan (CPO) | content-qa-checklist, team-onboarding | internal-comms; onboarding, churn-prevention, public-relations, sales-enablement, referrals, revops, prospecting; post-scorer |
+
+Sources (each imported folder keeps its LICENSE and a SOURCE.md with the commit):
+[anthropics/skills](https://github.com/anthropics/skills) (Apache-2.0: theme-factory, canvas-design, frontend-design, mcp-builder, internal-comms),
+[charlie947/social-media-skills](https://github.com/charlie947/social-media-skills) (MIT: the social-media group after the second semicolon),
+[jeevanbavandla/instagram-carousel-skill](https://github.com/jeevanbavandla/instagram-carousel-skill) (MIT),
+[peterhdd/agent-skills](https://github.com/peterhdd/agent-skills) (MIT: the engineering-* skills).
+The marketing group (marketing-plan through prospecting) comes from [coreyhaines31/marketingskills](https://github.com/coreyhaines31/marketingskills) (MIT).
+Each imported folder keeps its LICENSE and a SOURCE.md with the commit.
+Some imported skills describe tools HQ agents cannot run (image generators, ad platforms, analytics APIs);
+agents use the method and skip those steps.
 
 Add a skill from any GitHub repository:
 
@@ -80,7 +92,7 @@ npm run skills:add -- https://github.com/<owner>/<repo> <path/to/skill-folder> -
 ```
 
 The command copies only Markdown and licence files (no scripts), refuses skills without an open
-licence (Apache, MIT, BSD, ISC, CC-BY), and writes `SOURCE.md` with the repository, commit and licence.
+licence (Apache, MIT, BSD, ISC, CC-BY) and refuses licences that restrict commercial use (Commons Clause, non-commercial, BSL), and writes `SOURCE.md` with the repository, commit and licence.
 Imported skills that expect to run code only partly apply: HQ agents read and write text files.
 
 ## Hiring

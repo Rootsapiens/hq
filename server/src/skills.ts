@@ -82,7 +82,7 @@ export class Skills {
     if (text.length > MAX_CHARS) text = `${text.slice(0, MAX_CHARS)}\n\n[truncated at ${MAX_CHARS} characters]`;
     const others = this.files(name).filter((f) => f !== rel && f !== "SKILL.md");
     const meta = this.metas.get(name);
-    const head = meta?.source ? `[Imported skill from ${meta.source}. Only its Markdown is available in HQ: skip steps that run scripts or tools you do not have.]\n\n` : "";
+    const head = meta?.source ? `[Imported skill from ${meta.source}. Only its Markdown is available in HQ: skip steps that run scripts or tools you do not have. Where it says to read or write a local file (for example voice.md or about-me.md), use read_file and save_file in HQ; if the file does not exist yet, ask for it in your report instead of inventing it.]\n\n` : "";
     return { ok: true, text: head + text + (others.length && !file ? `\n\nOther files in this skill (open with use_skill + file): ${others.join(", ")}` : "") };
   }
 
