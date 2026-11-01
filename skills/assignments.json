@@ -1,34 +1,74 @@
 {
   "cyrex": [
-    "campaign-orchestration"
+    "campaign-orchestration",
+    "marketing-plan",
+    "launch",
+    "offers",
+    "pricing",
+    "product-marketing",
+    "marketing-ideas",
+    "co-marketing",
+    "analytics",
+    "marketing-loops"
   ],
   "zurub": [
     "social-research-brief",
     "content-calendar",
-    "competitor-scan"
+    "competitor-scan",
+    "customer-research",
+    "competitors",
+    "competitor-profiling",
+    "reverse-engineer-marketing",
+    "marketing-psychology",
+    "content-strategy",
+    "ai-seo"
   ],
   "nedal": [
     "reel-script",
     "caption-writing",
-    "hook-writing"
+    "hook-writing",
+    "social",
+    "copywriting",
+    "copy-editing",
+    "video",
+    "emails",
+    "influencer-marketing",
+    "community-marketing"
   ],
   "aktham": [
     "carousel-design",
     "ai-image-prompting",
     "brand-kit",
     "theme-factory",
-    "canvas-design"
+    "canvas-design",
+    "image",
+    "ad-creative",
+    "lead-magnets",
+    "cro",
+    "site-architecture"
   ],
   "rajaie": [
     "reel-edit-spec",
     "platform-specs",
     "scheduling-plan",
     "frontend-design",
-    "mcp-builder"
+    "mcp-builder",
+    "conversion-tracking",
+    "attribution",
+    "schema",
+    "seo-audit",
+    "ads"
   ],
   "razan": [
     "content-qa-checklist",
     "team-onboarding",
-    "internal-comms"
+    "internal-comms",
+    "onboarding",
+    "churn-prevention",
+    "public-relations",
+    "sales-enablement",
+    "referrals",
+    "revops",
+    "prospecting"
   ]
 }

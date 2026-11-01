@@ -64,14 +64,21 @@ Each agent carries a library of skills (playbooks in `skills/`), assigned in `sk
 Agents see their skills' names and descriptions and open the full playbook with the `use_skill` tool
 when the work calls for it. The Roster shows every agent's skills.
 
-| Agent | Agency skills (ours) | Imported (Apache-2.0, anthropics/skills) |
+Every agent has 10 skills.
+
+| Agent | Agency skills (ours) | Imported |
 |---|---|---|
-| Cyrex | campaign-orchestration | |
-| Zurub | social-research-brief, content-calendar, competitor-scan | |
-| Nedal | reel-script, caption-writing, hook-writing | |
-| Aktham | carousel-design, ai-image-prompting, brand-kit | theme-factory, canvas-design |
-| Rajaie | reel-edit-spec, platform-specs, scheduling-plan | frontend-design, mcp-builder |
-| Razan | content-qa-checklist, team-onboarding | internal-comms |
+| Cyrex (CEO) | campaign-orchestration | marketing-plan, launch, offers, pricing, product-marketing, marketing-ideas, co-marketing, analytics, marketing-loops |
+| Zurub (CSO) | social-research-brief, content-calendar, competitor-scan | customer-research, competitors, competitor-profiling, reverse-engineer-marketing, marketing-psychology, content-strategy, ai-seo |
+| Nedal (CMO) | reel-script, caption-writing, hook-writing | social, copywriting, copy-editing, video, emails, influencer-marketing, community-marketing |
+| Aktham (CCO) | carousel-design, ai-image-prompting, brand-kit | theme-factory, canvas-design (Apache-2.0, anthropics/skills); image, ad-creative, lead-magnets, cro, site-architecture |
+| Rajaie (CTO) | reel-edit-spec, platform-specs, scheduling-plan | frontend-design, mcp-builder (Apache-2.0, anthropics/skills); conversion-tracking, attribution, schema, seo-audit, ads |
+| Razan (CPO) | content-qa-checklist, team-onboarding | internal-comms (Apache-2.0, anthropics/skills); onboarding, churn-prevention, public-relations, sales-enablement, referrals, revops, prospecting |
+
+Imported skills without a note come from [coreyhaines31/marketingskills](https://github.com/coreyhaines31/marketingskills) (MIT).
+Each imported folder keeps its LICENSE and a SOURCE.md with the commit.
+Some imported skills describe tools HQ agents cannot run (image generators, ad platforms, analytics APIs);
+agents use the method and skip those steps.
 
 Add a skill from any GitHub repository:
 
