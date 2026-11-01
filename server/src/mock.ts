@@ -122,6 +122,8 @@ export class MockModel implements ModelClient {
     } else if (!secondRound) {
       text = `[MOCK] ${input.agent.name} here. Picking up "${short}". Heading to my desk in ${input.agent.room.replace("-", " ")}.`;
       calls.push({ id: id(), name: "update_status", input: { status: "WORKING", note: short } });
+      const skill = /Your skills[^\n]*\n- ([\w-]+):/.exec(input.system)?.[1];
+      if (skill) calls.push({ id: id(), name: "use_skill", input: { name: skill } });
     } else {
       await sleep(this.opts.workMs);
       const ask = /#ask\b/i.test(userText);

@@ -41,6 +41,7 @@ const app = await startApp({
   ownerToken,
   publicDetail,
   staticDir,
+  skillsDir: process.env.HQ_SKILLS_DIR ?? join(here, "..", "..", "skills"),
   meetingMs: process.env.MEETING_MS ? Number(process.env.MEETING_MS) : undefined,
 });
 console.log(`[hq] server on http://${host}:${app.port} (ws /ws)${ownerToken ? `, PUBLIC: viewers watch (${publicDetail}), owner logs in` : ""}${staticDir ? ", serving web app" : ""}`);

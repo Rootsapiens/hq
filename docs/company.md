@@ -58,6 +58,31 @@ Ten checks, each scored 0 or 1. Pass at **8/10 or higher** and **no fail** on th
 | 9 | Accessibility: captions on video, alt text, contrast on a phone | |
 | 10 | Clear call to action | |
 
+## Skills
+
+Each agent carries a library of skills (playbooks in `skills/`), assigned in `skills/assignments.json`.
+Agents see their skills' names and descriptions and open the full playbook with the `use_skill` tool
+when the work calls for it. The Roster shows every agent's skills.
+
+| Agent | Agency skills (ours) | Imported (Apache-2.0, anthropics/skills) |
+|---|---|---|
+| Cyrex | campaign-orchestration | |
+| Zurub | social-research-brief, content-calendar, competitor-scan | |
+| Nedal | reel-script, caption-writing, hook-writing | |
+| Aktham | carousel-design, ai-image-prompting, brand-kit | theme-factory, canvas-design |
+| Rajaie | reel-edit-spec, platform-specs, scheduling-plan | frontend-design, mcp-builder |
+| Razan | content-qa-checklist, team-onboarding | internal-comms |
+
+Add a skill from any GitHub repository:
+
+```bash
+npm run skills:add -- https://github.com/<owner>/<repo> <path/to/skill-folder> --agent <id>
+```
+
+The command copies only Markdown and licence files (no scripts), refuses skills without an open
+licence (Apache, MIT, BSD, ISC, CC-BY), and writes `SOURCE.md` with the repository, commit and licence.
+Imported skills that expect to run code only partly apply: HQ agents read and write text files.
+
 ## Hiring
 
 New agents report to one of the C-suite and are named after Mortal Kombat 3 characters.

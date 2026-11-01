@@ -33,6 +33,8 @@ export const AgentViewSchema = z.object({
   needsInput: z.boolean(),
   queue: z.number().int().nonnegative(),
   error: z.string().nullable(),
+  /** Skill names from the skill library assigned to this agent. */
+  skills: z.array(z.string()),
 });
 export type AgentView = z.infer<typeof AgentViewSchema>;
 

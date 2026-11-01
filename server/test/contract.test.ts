@@ -243,7 +243,7 @@ describe("tools and persistence", () => {
     expect(seen.length).toBe(0);
     await post(h.base, "/api/agents/rajaie/message", { text: "delegate this" });
     await waitFor(() => statuses(h.events, "rajaie").includes("DONE"));
-    expect(seen[0]?.tools.map((t) => t.name)).toEqual(["update_status", "save_file", "read_file", "list_files", "report_result"]);
+    expect(seen[0]?.tools.map((t) => t.name)).toEqual(["update_status", "use_skill", "save_file", "read_file", "list_files", "report_result"]);
     const lastMsg = seen[1]?.messages.at(-1);
     expect(JSON.stringify(lastMsg)).toContain("Only the Boss can assign tasks");
     expect(statuses(h.events, "aktham")).toEqual([]);
@@ -388,5 +388,30 @@ describe("public mode (HQ_OWNER_TOKEN)", () => {
   it("rejects short owner tokens", async () => {
     await expect(startApp({ model: new MockModel(), dbPath: ":memory:", port: 0, ownerToken: "short" })).rejects.toThrow(/16 characters/);
     h = await boot();
+  });
+});
+
+describe("skill library", () => {
+  const skillsDir = join(import.meta.dirname, "..", "..", "skills");
+
+  it("agents carry their skills, open them during work, and cannot open others' skills or escape the folder", async () => {
+    h = await boot(undefined, undefined, { skillsDir });
+    const snap = h.events[0];
+    const nedal = snap?.type === "snapshot" ? snap.agents.find((a) => a.id === "nedal") : undefined;
+    expect(nedal?.skills).toEqual(["reel-script", "caption-writing", "hook-writing"]);
+    await post(h.base, "/api/agents/cyrex/message", { text: "@nedal write 3 reel scripts" });
+    await waitFor(() => statuses(h.events, "nedal").includes("DONE"));
+    await h.app.hq.idle();
+    expect(h.events.some((e) => e.type === "activity" && e.entry.text === "Nedal opened skill reel-script")).toBe(true);
+
+    const { Skills } = await import("../src/skills");
+    const sk = new Skills(skillsDir);
+    expect(sk.promptFor("razan")).toContain("content-qa-checklist:");
+    const own = sk.read("razan", "content-qa-checklist");
+    expect(own.ok && own.text).toContain("Pass = 8/10");
+    expect(sk.read("razan", "reel-script").ok).toBe(false);
+    expect(sk.read("aktham", "theme-factory", "../../package.json").ok).toBe(false);
+    const imported = sk.read("aktham", "theme-factory");
+    expect(imported.ok && imported.text).toMatch(/^\[Imported skill from https:\/\/github\.com\/anthropics\/skills@\w{7} \(Apache License\)/);
   });
 });

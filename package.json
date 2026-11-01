@@ -14,7 +14,8 @@
     "typecheck": "tsc -p shared && tsc -p server --noEmit && tsc -p web --noEmit && tsc -p e2e",
     "test": "vitest run",
     "e2e": "playwright test",
-    "check": "npm run typecheck && npm run test"
+    "check": "npm run typecheck && npm run test",
+    "skills:add": "node scripts/add-skill.mjs"
   },
   "devDependencies": {
     "@playwright/test": "1.56.1",
