@@ -58,10 +58,15 @@ function framesFrom(canvas: HTMLCanvasElement): Frames {
 
 class Character {
   readonly root = new Container();
+  /** Name plate + status badge. Lives in the overlay layer so walls and trees never hide it. */
+  readonly tag = new Container();
+  /** Upward shift (px) chosen by the tag layout so plates do not overlap. */
+  tagShift = 0;
+  tagW = 0;
   private readonly body: Sprite;
   private readonly shadow = new Graphics();
   private readonly ring = new Graphics();
-  private readonly badge = new Container();
+  readonly badge = new Container();
   private readonly badgeG = new Graphics();
   private readonly badgeText: Text;
   private readonly label: Text;
@@ -114,7 +119,12 @@ class Character {
     this.badge.position.set(0, -SPRITE_H - 26);
     this.badge.visible = false;
 
-    this.root.addChild(this.shadow, this.ring, this.body, plate, this.label, this.badge);
+    this.tagW = w;
+    this.tag.addChild(plate, this.label, this.badge);
+    this.tag.eventMode = "static";
+    this.tag.cursor = "pointer";
+    this.tag.on("pointertap", () => onTap(view.id));
+    this.root.addChild(this.shadow, this.ring, this.body);
     this.root.eventMode = "static";
     this.root.cursor = "pointer";
     this.root.hitArea = new Rectangle(-16, -SPRITE_H - 16, 32, SPRITE_H + 20);
@@ -217,6 +227,7 @@ class Character {
 
     const s = toScreen(this.pos.x, this.pos.y);
     this.root.position.set(s.x, s.y);
+    this.tag.position.set(s.x, s.y - this.tagShift);
     this.root.zIndex = this.pos.x + this.pos.y + 0.05;
     this.ring.visible = this.selected;
     this.moving = moving;
@@ -282,6 +293,8 @@ export class Office {
   private readonly floor = new Container();
   private readonly objects = new Container();
   private readonly overlay = new Container();
+  /** Room-name rects, in the same baseline units as name plates, so plates never cover them. */
+  private readonly signs: { x0: number; x1: number; y: number }[] = [];
   private readonly chars = new Map<string, Character>();
   private brain = new Graphics();
   private brainLabel!: Text;
@@ -371,8 +384,20 @@ export class Office {
       t.anchor.set(0.5, 0.5);
       const p = toScreen(r.x0 + ROOM_W / 2 + 0.5, r.y1 + 0.5);
       t.position.set(p.x, p.y - 2);
-      this.overlay.addChild(t);
+      this.addSign(t);
+
     }
+  }
+
+  /** A floor sign on a soft white pill, always on top; name plates steer around it (layoutTags). */
+  private addSign(t: Text): void {
+    const w = t.width + 8;
+    const h = t.height + 2;
+    const pill = new Graphics();
+    pill.roundRect(t.x - w / 2, t.y - h / 2 - (t.anchor.y - 0.5) * t.height, w, h, 3).fill({ color: 0xffffff, alpha: 0.72 });
+    this.overlay.addChild(pill, t);
+    const cy = t.y - (t.anchor.y - 0.5) * t.height;
+    this.signs.push({ x0: t.x - w / 2, x1: t.x + w / 2, y: cy + SPRITE_H + 8 });
   }
 
   private block(tx: number, ty: number, h: number, top: number, inset = 0, alpha = 1): Graphics {
@@ -399,7 +424,15 @@ export class Office {
         // white back walls, a thin stone kerb at the front, glass partitions between rooms
         if (back) this.block(x, y, 30, 0xf7f7f5);
         else if (front) this.block(x, y, 4, 0xcfc8bd);
-        else this.block(x, y, 14, 0xbfe3f2, 0.12, 0.35);
+        else {
+          const g = this.block(x, y, 8, 0xa9d6ea, 0.1, 0.5); // low glass rail between rooms
+          // aluminium frame along the top edge of the glass
+          const a = toScreen(x + 0.1, y + 0.1);
+          const b = toScreen(x + 0.9, y + 0.1);
+          const c = toScreen(x + 0.9, y + 0.9);
+          const d = toScreen(x + 0.1, y + 0.9);
+          g.poly([a.x, a.y - 8, b.x, b.y - 8, c.x, c.y - 8, d.x, d.y - 8]).stroke({ width: 1, color: 0x7f8c98, alpha: 0.8 });
+        }
       }
   }
 
@@ -494,8 +527,7 @@ export class Office {
     });
     this.brainLabel.anchor.set(0.5, 0);
     this.brainLabel.position.set(p.x, p.y + 4);
-    this.brainLabel.zIndex = 999;
-    this.objects.addChild(this.brainLabel);
+    this.addSign(this.brainLabel);
   }
 
   private drawBrain(now: number): void {
@@ -644,6 +676,7 @@ export class Office {
         c.seatIndex = idx;
         this.chars.set(v.id, c);
         this.objects.addChild(c.root);
+        this.overlay.addChild(c.tag);
         const ch = c;
         void loadOverride(v.id).then((canvas) => {
           if (canvas) ch.setFrames(framesFrom(canvas));
@@ -651,6 +684,41 @@ export class Office {
       }
       c.setView(v, now);
     });
+  }
+
+  /**
+   * Stack name plates (and their status bubbles) that would overlap each other or a floor sign.
+   * The character nearest the camera keeps its plate in place; others move up just enough.
+   * Boxes are vertical spans in world px: plate = baseline-14..baseline, bubble adds 14 above.
+   */
+  private layoutTags(): void {
+    const GAP = 2;
+    const list = [...this.chars.values()].sort((a, b) => b.root.y - a.root.y);
+    const placed: { x0: number; x1: number; top: number; bottom: number }[] = this.signs.map((s) => ({
+      x0: s.x0,
+      x1: s.x1,
+      top: s.y - SPRITE_H - 15,
+      bottom: s.y - SPRITE_H - 1,
+    }));
+    for (const c of list) {
+      const half = Math.max(c.tagW / 2, c.badge.visible ? 13 : 0);
+      const x0 = c.root.x - half;
+      const x1 = c.root.x + half;
+      const extra = c.badge.visible ? 14 : 0;
+      let shift = 0;
+      for (let guard = 0; guard < 12; guard++) {
+        const bottom = c.root.y - SPRITE_H - shift;
+        const top = bottom - 14 - extra;
+        const hit = placed.find((p) => x0 < p.x1 && x1 > p.x0 && top < p.bottom + GAP && bottom > p.top - GAP);
+        if (!hit) break;
+        shift = c.root.y - SPRITE_H - (hit.top - GAP);
+      }
+      c.tagShift += (shift - c.tagShift) * 0.35; // glide rather than jump
+      if (Math.abs(shift - c.tagShift) < 0.5) c.tagShift = shift;
+      c.tag.position.set(c.root.x, c.root.y - c.tagShift);
+      const bottom = c.root.y - SPRITE_H - shift;
+      placed.push({ x0, x1, top: bottom - 14 - extra, bottom });
+    }
   }
 
   private occupied(): Point[] {
@@ -662,6 +730,7 @@ export class Office {
     const dt = Math.min(dtMs, 1000); // cap only huge gaps (background tab)
     const occ = this.occupied();
     for (const c of this.chars.values()) c.update(dt, now, occ);
+    this.layoutTags();
     this.drawBrain(now);
     if (this.follow) {
       const c = this.chars.get(this.follow);
