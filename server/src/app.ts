@@ -7,6 +7,7 @@ import { WebSocketServer, type WebSocket } from "ws";
 import { PauseBodySchema, PostMessageBodySchema, type ServerEvent } from "../../shared/events";
 import { Access, type PublicDetail, type Role } from "./access";
 import { HqDb } from "./db";
+import { Skills } from "./skills";
 import { Hq, type HqOptions } from "./hq";
 import { errorMessage, type ModelClient } from "./model";
 
@@ -20,6 +21,8 @@ export interface AppOptions extends Omit<HqOptions, "db" | "model"> {
   publicDetail?: PublicDetail;
   /** Serve the built web app (web/dist) from this folder. */
   staticDir?: string;
+  /** Skill library folder (skills/). */
+  skillsDir?: string;
 }
 
 export interface App {
@@ -120,7 +123,7 @@ async function serveStatic(root: string, path: string, res: ServerResponse): Pro
 
 export async function startApp(opts: AppOptions): Promise<App> {
   const db = new HqDb(opts.dbPath);
-  const hq = new Hq({ ...opts, db, model: opts.model });
+  const hq = new Hq({ ...opts, db, model: opts.model, skills: new Skills(opts.skillsDir ?? "") });
   const access = new Access({ ownerToken: opts.ownerToken, publicDetail: opts.publicDetail });
   const secure = (req: IncomingMessage) => req.headers["x-forwarded-proto"] === "https";
   // crude login throttle: 10 tries per IP per 10 minutes

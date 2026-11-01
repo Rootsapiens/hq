@@ -116,6 +116,15 @@ function Roster() {
                   {a.queue > 0 && <div className="text-slate-500">{a.queue} queued</div>}
                 </div>
               )}
+              {a.skills.length > 0 && (
+                <div className="mt-1.5 flex flex-wrap gap-1" data-testid={`skills-${a.id}`}>
+                  {a.skills.map((sk) => (
+                    <span key={sk} className="rounded bg-ink-850 px-1.5 py-0.5 text-[11px] text-slate-300 ring-1 ring-ink-700">
+                      {sk}
+                    </span>
+                  ))}
+                </div>
+              )}
             </div>
           </button>
         </li>

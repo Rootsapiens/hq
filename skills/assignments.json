@@ -1,0 +1,34 @@
+{
+  "cyrex": [
+    "campaign-orchestration"
+  ],
+  "zurub": [
+    "social-research-brief",
+    "content-calendar",
+    "competitor-scan"
+  ],
+  "nedal": [
+    "reel-script",
+    "caption-writing",
+    "hook-writing"
+  ],
+  "aktham": [
+    "carousel-design",
+    "ai-image-prompting",
+    "brand-kit",
+    "theme-factory",
+    "canvas-design"
+  ],
+  "rajaie": [
+    "reel-edit-spec",
+    "platform-specs",
+    "scheduling-plan",
+    "frontend-design",
+    "mcp-builder"
+  ],
+  "razan": [
+    "content-qa-checklist",
+    "team-onboarding",
+    "internal-comms"
+  ]
+}

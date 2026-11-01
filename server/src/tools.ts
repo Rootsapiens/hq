@@ -8,6 +8,7 @@ export const ReportResultInput = z.object({ summary: z.string().min(1), needs_in
 export const UpdateStatusInput = z.object({ status: z.enum(["WORKING", "THINKING"]), note: z.string().optional() });
 
 export const SaveFileInput = z.object({ name: z.string().min(1), content: z.string(), title: z.string().optional() });
+export const UseSkillInput = z.object({ name: z.string().min(1), file: z.string().optional() });
 export const ReadFileInput = z.object({ name: z.string().min(1) });
 
 export function toolsFor(agent: AgentConfig): ToolDef[] {
@@ -23,6 +24,15 @@ export function toolsFor(agent: AgentConfig): ToolDef[] {
           note: { type: "string", description: "Short note, max ~8 words." },
         },
         required: ["status"],
+      },
+    },
+    {
+      name: "use_skill",
+      description: "Open one of your skills (a playbook listed in your instructions) and follow it. Pass file to open another Markdown file inside the skill.",
+      input_schema: {
+        type: "object",
+        properties: { name: { type: "string" }, file: { type: "string", description: "Optional file inside the skill." } },
+        required: ["name"],
       },
     },
     {

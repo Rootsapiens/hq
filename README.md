@@ -40,14 +40,14 @@ shown as a `MOCK` badge in the top bar. Never commit `.env`.
 | Rajaie | CTO, AI Production & Data: reel specs, scheduling plans, platform | Production & Data | blue |
 | Razan | CPO, People & Quality: scored QA gate, onboarding, watchdog | Quality Desk | purple |
 
-System prompts are short summaries of the agent files; the agent files themselves are not read at runtime.
+Each agent also has skills (playbooks in `skills/`, opened with the `use_skill` tool); see [docs/company.md](docs/company.md#skills). Add one from GitHub with `npm run skills:add -- <repo-url> <path> --agent <id>`.
 
 ## Server
 
 - `POST /api/agents/:id/message` `{ "text": "..." }` queues a message (202). `GET /api/agents/:id/messages`, `GET /api/state`, `GET /api/files`, `GET /api/files/:id`, `GET /api/files/:id/download`, `POST /api/pause` `{ "paused": true }`, `GET /api/health`.
 - Local only: binds 127.0.0.1 and refuses requests and WS connections from non-localhost Origins.
 - WebSocket `/ws`: a `snapshot` first, then events. The contract lives in `shared/events.ts` (zod schemas, no `any`).
-- Tools: `assign_task` (Boss only), `save_file`, `read_file`, `list_files`, `report_result`, `update_status`. One queue per agent; model calls retry with
+- Tools: `assign_task` (Boss only), `use_skill`, `save_file`, `read_file`, `list_files`, `report_result`, `update_status`. One queue per agent; model calls retry with
   exponential backoff (3 retries); a final failure turns the agent ERROR and never crashes the server.
 - Storage: SQLite (`better-sqlite3`) at `server/data/hq.sqlite` (git-ignored). Override with `HQ_DB`.
 - Env: `ANTHROPIC_API_KEY`, `MODEL` (default `claude-sonnet-5-5`), `MOCK`, `HQ_PORT` (8787), `MEETING_MS` (8000).

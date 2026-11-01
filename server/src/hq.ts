@@ -6,7 +6,8 @@ import { FILE_NAME_RE, MAX_FILE_BYTES, type ActivityEntry, type AgentStatus, typ
 import type { HqDb } from "./db";
 import { errorMessage, isRetryable, type MessageParam, type ModelClient, type ToolCall, type TurnResult } from "./model";
 import { AgentStateMachine, DONE_HOLD_MS } from "./state";
-import { AssignTaskInput, ReadFileInput, ReportResultInput, SaveFileInput, UpdateStatusInput, toolsFor } from "./tools";
+import { AssignTaskInput, ReadFileInput, ReportResultInput, SaveFileInput, UpdateStatusInput, UseSkillInput, toolsFor } from "./tools";
+import { Skills } from "./skills";
 
 export interface HqOptions {
   db: HqDb;
@@ -17,6 +18,7 @@ export interface HqOptions {
   retryBaseMs?: number;
   maxToolRounds?: number;
   historyLimit?: number;
+  skills?: Skills;
 }
 
 interface Job {
@@ -56,6 +58,7 @@ export class Hq {
   private readonly retryBaseMs: number;
   private readonly maxToolRounds: number;
   private readonly historyLimit: number;
+  private readonly skills: Skills;
 
   constructor(opts: HqOptions) {
     this.db = opts.db;
@@ -65,6 +68,7 @@ export class Hq {
     this.retryBaseMs = opts.retryBaseMs ?? 800;
     this.maxToolRounds = opts.maxToolRounds ?? 10;
     this.historyLimit = opts.historyLimit ?? 30;
+    this.skills = opts.skills ?? new Skills("");
     for (const config of AGENTS) {
       const rt: Runtime = {
         config,
@@ -190,6 +194,7 @@ export class Hq {
       needsInput: rt.needsInput,
       queue: rt.queue.length,
       error: rt.sm.error,
+      skills: this.skills.for(c.id).map((s) => s.name),
     };
   }
 
@@ -280,7 +285,7 @@ export class Hq {
       this.emit({ type: "brain", calls: this.brainCalls });
       try {
         const result = await this.model.turn(
-          { agent: rt.config, system: rt.config.systemPrompt, messages, tools: toolsFor(rt.config) },
+          { agent: rt.config, system: rt.config.systemPrompt + this.skills.promptFor(rt.config.id), messages, tools: toolsFor(rt.config) },
           (delta) => {
             if (!message) message = this.saveMessage({ thread, author: thread, content: "", state: "streaming" });
             message.content += delta;
@@ -384,6 +389,13 @@ export class Hq {
           const input = UpdateStatusInput.parse(call.input);
           this.setStatus(rt, input.status, input.note ? clip(input.note, 60) : undefined);
           return { content: "ok", isError: false };
+        }
+        case "use_skill": {
+          const input = UseSkillInput.parse(call.input);
+          const r = this.skills.read(rt.config.id, input.name.trim(), input.file?.trim() || undefined);
+          if (!r.ok) return { content: r.error, isError: true };
+          this.activity(rt.config.id, "status", `${rt.config.name} opened skill ${input.name}${input.file ? ` (${input.file})` : ""}`);
+          return { content: r.text, isError: false };
         }
         case "save_file": {
           const input = SaveFileInput.parse(call.input);
