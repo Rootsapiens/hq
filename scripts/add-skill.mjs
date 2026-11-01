@@ -31,7 +31,7 @@ if (paths.some((p) => p.includes(".."))) throw new Error("bad path");
 if (name && paths.length > 1) throw new Error("--name works with one path only");
 
 const OPEN = /Apache License|MIT License|Permission is hereby granted, free of charge|BSD \d-Clause|Redistribution and use in source and binary forms|Creative Commons Attribution|CC-BY|ISC License/i;
-const CLOSED = /All rights reserved|proprietary|may not (?:copy|use|distribute)/i;
+const CLOSED = /All rights reserved|proprietary|may not (?:copy|use|distribute)|Commons Clause|non-commercial|NonCommercial|CC[- ]BY[- ]NC|Business Source License|Server Side Public License|Elastic License/i;
 const licenceIn = (dir) => readdirSync(dir).find((f) => /^(licen[cs]e|copying)(\.|$)/i.test(f));
 
 const tmp = mkdtempSync(join(tmpdir(), "hq-skill-"));
@@ -45,7 +45,9 @@ try {
     const licFile = own ? join(src, own) : licenceIn(tmp) ? join(tmp, licenceIn(tmp)) : null;
     if (!licFile) throw new Error("no LICENSE in the skill folder or the repository: refusing (unknown terms)");
     const lic = readFileSync(licFile, "utf8");
-    if (CLOSED.test(lic.slice(0, 2000)) && !OPEN.test(lic)) throw new Error(`licence is not open (${basename(licFile)}): refusing`);
+    // any restriction on commercial use or redistribution wins over an open-licence name in the same text
+    if (CLOSED.test(lic.slice(0, 4000)) && !/^\s*(MIT License|Apache License)/i.test(lic) ) throw new Error(`licence restricts use (${basename(licFile)}): refusing`);
+    if (/Commons Clause|non-?commercial|CC[- ]BY[- ]NC|Business Source License/i.test(lic)) throw new Error(`licence restricts commercial use (${basename(licFile)}): refusing`);
     if (!OPEN.test(lic)) throw new Error(`licence not recognised as open (${basename(licFile)}): refusing; review it by hand`);
     const licName = (lic.match(OPEN)?.[0] ?? "open licence").replace(/Permission is hereby granted.*/i, "MIT License");
   

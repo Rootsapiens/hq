@@ -9,7 +9,10 @@
     "marketing-ideas",
     "co-marketing",
     "analytics",
-    "marketing-loops"
+    "marketing-loops",
+    "content-matrix",
+    "post-scorer",
+    "niche-research"
   ],
   "zurub": [
     "social-research-brief",
@@ -21,7 +24,10 @@
     "reverse-engineer-marketing",
     "marketing-psychology",
     "content-strategy",
-    "ai-seo"
+    "ai-seo",
+    "niche-research",
+    "content-matrix",
+    "profile-optimizer"
   ],
   "nedal": [
     "reel-script",
@@ -33,7 +39,15 @@
     "video",
     "emails",
     "influencer-marketing",
-    "community-marketing"
+    "community-marketing",
+    "reels-scripting",
+    "hook-generator",
+    "post-writer",
+    "voice-builder",
+    "newsletter-voice",
+    "pinned-comment",
+    "post-formatter",
+    "quote-post"
   ],
   "aktham": [
     "carousel-design",
@@ -45,7 +59,12 @@
     "ad-creative",
     "lead-magnets",
     "cro",
-    "site-architecture"
+    "site-architecture",
+    "graphic-designer",
+    "youtube-thumbnail",
+    "gemini-carousel",
+    "gemini-infographic",
+    "instagram-carousel"
   ],
   "rajaie": [
     "reel-edit-spec",
@@ -57,7 +76,12 @@
     "attribution",
     "schema",
     "seo-audit",
-    "ads"
+    "ads",
+    "analytics-dashboard",
+    "engineering-devops-automator",
+    "engineering-security-engineer",
+    "engineering-frontend-developer",
+    "engineering-system-designer"
   ],
   "razan": [
     "content-qa-checklist",
@@ -69,6 +93,7 @@
     "sales-enablement",
     "referrals",
     "revops",
-    "prospecting"
+    "prospecting",
+    "post-scorer"
   ]
 }

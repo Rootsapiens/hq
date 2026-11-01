@@ -398,9 +398,9 @@ describe("skill library", () => {
     h = await boot(undefined, undefined, { skillsDir });
     const snap = h.events[0];
     const nedal = snap?.type === "snapshot" ? snap.agents.find((a) => a.id === "nedal") : undefined;
-    expect(nedal?.skills).toHaveLength(10);
+    expect(nedal?.skills.length).toBeGreaterThanOrEqual(10);
     expect(nedal?.skills.slice(0, 3)).toEqual(["reel-script", "caption-writing", "hook-writing"]);
-    for (const a of snap?.type === "snapshot" ? snap.agents : []) expect(a.skills).toHaveLength(10);
+    for (const a of snap?.type === "snapshot" ? snap.agents : []) expect(a.skills.length).toBeGreaterThanOrEqual(10);
     await post(h.base, "/api/agents/cyrex/message", { text: "@nedal write 3 reel scripts" });
     await waitFor(() => statuses(h.events, "nedal").includes("DONE"));
     await h.app.hq.idle();
